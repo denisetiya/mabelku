@@ -129,19 +129,20 @@ const allImages = product.mainImage ? [product.mainImage, ...images] : images;
     </form>
   </div>
 
-  <script define:vars={{ allImages, productId: id }}>
-    let uploadedImages = [...allImages];
+  <script is:inline define:vars={{ allImages, productId: id }}>
+    let uploadedImages = allImages.slice();
 
-    const uploadZone = document.getElementById('upload-zone')!;
-    const fileInput = document.getElementById('file-input') as HTMLInputElement;
-    const preview = document.getElementById('image-preview')!;
-    const mainImageSelect = document.getElementById('mainImage') as HTMLSelectElement;
-    let currentMainImage = '';
+    const uploadZone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('file-input');
+    const preview = document.getElementById('image-preview');
+    const mainImageSelect = document.getElementById('mainImage');
 
     uploadZone.addEventListener('click', () => fileInput.click());
 
     fileInput.addEventListener('change', async () => {
-      for (const file of fileInput.files!) {
+      const files = fileInput.files;
+      if (!files) return;
+      for (const file of files) {
         const formData = new FormData();
         formData.append('file', file);
         try {
@@ -157,7 +158,7 @@ const allImages = product.mainImage ? [product.mainImage, ...images] : images;
     });
 
     function renderPreviews() {
-      preview.innerHTML = uploadedImages.map((url: string, i: number) => `
+      preview.innerHTML = uploadedImages.map((url, i) => `
         <div class="relative aspect-square rounded-lg overflow-hidden bg-muted-bg group">
           <img src="${url}" alt="" class="w-full h-full object-cover" />
           <button type="button" data-remove="${i}" class="absolute top-1 right-1 bg-destructive text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">x</button>
@@ -166,46 +167,50 @@ const allImages = product.mainImage ? [product.mainImage, ...images] : images;
 
       preview.querySelectorAll('[data-remove]').forEach((btn) => {
         btn.addEventListener('click', () => {
-          const idx = parseInt((btn as HTMLElement).dataset.remove!, 10);
-          uploadedImages.splice(idx, 1);
-          renderPreviews();
+          const idx = parseInt(btn.getAttribute('data-remove') || '-1', 10);
+          if (idx >= 0) {
+            uploadedImages.splice(idx, 1);
+            renderPreviews();
+          }
         });
       });
 
-      mainImageSelect.innerHTML = uploadedImages.map((url: string, i: number) => `<option value="${url}" ${i === 0 ? 'selected' : ''}>Foto ${i + 1}</option>`).join('');
-      currentMainImage = mainImageSelect.value;
+      mainImageSelect.innerHTML = uploadedImages.map((url, i) => `<option value="${url}" ${i === 0 ? 'selected' : ''}>Foto ${i + 1}</option>`).join('');
     }
 
     renderPreviews();
 
+    const val = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
+    const checked = (id) => { const el = document.getElementById(id); return el ? el.checked : false; };
+
     document.getElementById('product-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const btn = document.getElementById('submit-btn') as HTMLButtonElement;
+      const btn = document.getElementById('submit-btn');
 
       const data = {
-        name: (document.getElementById('name') as HTMLInputElement).value,
-        sku: (document.getElementById('sku') as HTMLInputElement).value || null,
-        shortDescription: (document.getElementById('shortDescription') as HTMLTextAreaElement).value || null,
-        description: (document.getElementById('description') as HTMLTextAreaElement).value || null,
-        price: parseInt((document.getElementById('price') as HTMLInputElement).value, 10),
-        discountPrice: (document.getElementById('discountPrice') as HTMLInputElement).value ? parseInt((document.getElementById('discountPrice') as HTMLInputElement).value, 10) : null,
-        stock: parseInt((document.getElementById('stock') as HTMLInputElement).value, 10),
-        material: (document.getElementById('material') as HTMLInputElement).value || null,
-        color: (document.getElementById('color') as HTMLInputElement).value || null,
-        dimension: (document.getElementById('dimension') as HTMLInputElement).value || null,
-        weight: (document.getElementById('weight') as HTMLInputElement).value ? parseInt((document.getElementById('weight') as HTMLInputElement).value, 10) : null,
-        categoryId: (document.getElementById('categoryId') as HTMLSelectElement).value,
+        name: val('name'),
+        sku: val('sku') || null,
+        shortDescription: val('shortDescription') || null,
+        description: val('description') || null,
+        price: parseInt(val('price'), 10),
+        discountPrice: val('discountPrice') ? parseInt(val('discountPrice'), 10) : null,
+        stock: parseInt(val('stock'), 10),
+        material: val('material') || null,
+        color: val('color') || null,
+        dimension: val('dimension') || null,
+        weight: val('weight') ? parseInt(val('weight'), 10) : null,
+        categoryId: val('categoryId'),
         mainImage: mainImageSelect.value || uploadedImages[0] || null,
         images: uploadedImages,
-        isFeatured: (document.getElementById('isFeatured') as HTMLInputElement).checked,
-        isActive: (document.getElementById('isActive') as HTMLInputElement).checked,
+        isFeatured: checked('isFeatured'),
+        isActive: checked('isActive'),
       };
 
       btn.disabled = true;
       btn.textContent = 'Updating...';
 
       try {
-        const res = await fetch(`/api/admin/products/${productId}`, {
+        const res = await fetch('/api/admin/products/' + productId, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),

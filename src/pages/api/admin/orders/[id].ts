@@ -1,7 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
-import { z } from 'zod';
 
 export const GET: APIRoute = async ({ params }) => {
   const id = params.id;

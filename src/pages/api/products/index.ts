@@ -1,7 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db, schema } from '../../../lib/db';
 import { eq, desc, asc, like, and, sql } from 'drizzle-orm';
-import { getEffectivePrice } from '../../../lib/product';
 
 export const GET: APIRoute = async ({ url }) => {
   const searchParams = url.searchParams;

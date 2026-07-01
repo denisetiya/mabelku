@@ -1,7 +1,5 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { db, schema } from '../../../lib/db';
-import { eq } from 'drizzle-orm';
 ---
 
 <AdminLayout title="Kategori" active="/admin/kategori">
@@ -66,8 +64,9 @@ import { eq } from 'drizzle-orm';
   </div>
 
   <script>
-    const modal = document.getElementById('modal')!;
+    const modal = document.getElementById('modal') as HTMLElement;
     const form = document.getElementById('category-form') as HTMLFormElement;
+    if (!modal || !form) throw new Error('Missing elements');
 
     async function loadCategories() {
       const res = await fetch('/api/admin/categories');
@@ -119,8 +118,8 @@ import { eq } from 'drizzle-orm';
     }
 
     function openModal(cat?: any) {
-      document.getElementById('modal-title')!.textContent = cat ? 'Edit Kategori' : 'Tambah Kategori';
-      document.getElementById('categoryId')!.value = cat?.id || '';
+      (document.getElementById('modal-title') as HTMLElement).textContent = cat ? 'Edit Kategori' : 'Tambah Kategori';
+      (document.getElementById('categoryId') as HTMLInputElement).value = cat?.id || '';
       (document.getElementById('categoryName') as HTMLInputElement).value = cat?.name || '';
       (document.getElementById('categoryDescription') as HTMLTextAreaElement).value = cat?.description || '';
       (document.getElementById('categoryImage') as HTMLInputElement).value = cat?.image || '';
@@ -141,7 +140,7 @@ import { eq } from 'drizzle-orm';
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const id = document.getElementById('categoryId')!.value;
+      const id = (document.getElementById('categoryId') as HTMLInputElement).value;
       const data = {
         name: (document.getElementById('categoryName') as HTMLInputElement).value,
         description: (document.getElementById('categoryDescription') as HTMLTextAreaElement).value || null,

@@ -1,7 +1,6 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { db, schema } from '../../../lib/db';
-import { eq } from 'drizzle-orm';
 
 const categories = db.select().from(schema.categories).all();
 ---

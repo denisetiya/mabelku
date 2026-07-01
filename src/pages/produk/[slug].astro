@@ -89,7 +89,7 @@ const schemaOrg = {
   description={product.shortDescription || product.description?.slice(0, 160) || ''}
   image={product.mainImage ?? undefined}
 >
-  <script type="application/ld+json" set:html={JSON.stringify(schemaOrg)} />
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(schemaOrg)} />
 
   <section class="container-page pt-10 pb-4">
     <nav class="flex items-center gap-2 text-sm text-muted">

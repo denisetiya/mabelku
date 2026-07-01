@@ -1,9 +1,3 @@
-function hashSlug(slug: string): number {
-  let h = 0;
-  for (let i = 0; i < slug.length; i++) h = (h << 5) - h + slug.charCodeAt(i);
-  return Math.abs(h);
-}
-
 function picsum(seed: string, w: number, h: number): string {
   return `https://picsum.photos/seed/${encodeURIComponent(seed)}/${w}/${h}`;
 }

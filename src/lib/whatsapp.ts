@@ -14,7 +14,7 @@ export function buildOrderConfirmationMessage(
 
 export function buildProductInquiryMessage(
   productName: string,
-  slug: string,
+  _slug: string,
   price: number,
 ): string {
   return `Halo, saya tertarik dengan produk "${productName}" (harga Rp${price.toLocaleString('id-ID')}). Apakah masih tersedia?`;

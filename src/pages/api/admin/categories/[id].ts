@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db, schema } from '../../../../lib/db';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { slugify } from '../../../../lib/slug';
 import { deleteFile } from '../../../../lib/upload';
@@ -14,6 +14,14 @@ const categorySchema = z.object({
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
+    const id = params.id;
+    if (!id) {
+      return new Response(JSON.stringify({ error: 'ID kategori wajib diisi' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const body = await request.json();
     const parsed = categorySchema.safeParse(body);
 
@@ -36,7 +44,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
         isActive: data.isActive ?? true,
         updatedAt: new Date().toISOString(),
       })
-      .where(eq(schema.categories.id, params.id))
+      .where(eq(schema.categories.id, id))
       .run();
 
     return new Response(
@@ -54,7 +62,15 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
 export const DELETE: APIRoute = async ({ params }) => {
   try {
-    const category = db.select().from(schema.categories).where(eq(schema.categories.id, params.id)).get();
+    const id = params.id;
+    if (!id) {
+      return new Response(JSON.stringify({ error: 'ID kategori wajib diisi' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const category = db.select().from(schema.categories).where(eq(schema.categories.id, id)).get();
 
     if (!category) {
       return new Response(JSON.stringify({ error: 'Kategori tidak ditemukan' }), {
@@ -66,7 +82,7 @@ export const DELETE: APIRoute = async ({ params }) => {
     const productCount = db
       .select({ count: sql<number>`count(*)` })
       .from(schema.products)
-      .where(eq(schema.products.categoryId, params.id))
+      .where(eq(schema.products.categoryId, id))
       .get()?.count ?? 0;
 
     if (productCount > 0) {
@@ -80,7 +96,7 @@ export const DELETE: APIRoute = async ({ params }) => {
       deleteFile(category.image);
     }
 
-    db.delete(schema.categories).where(eq(schema.categories.id, params.id)).run();
+    db.delete(schema.categories).where(eq(schema.categories.id, id)).run();
 
     return new Response(
       JSON.stringify({ success: true }),
@@ -94,5 +110,3 @@ export const DELETE: APIRoute = async ({ params }) => {
     );
   }
 };
-
-import { sql } from 'drizzle-orm';

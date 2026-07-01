@@ -7,10 +7,18 @@ import { serializeImages } from '../../../../lib/product';
 import { deleteFile } from '../../../../lib/upload';
 
 export const GET: APIRoute = async ({ params }) => {
+  const id = params.id;
+  if (!id) {
+    return new Response(JSON.stringify({ error: 'ID produk wajib diisi' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const product = db
     .select()
     .from(schema.products)
-    .where(eq(schema.products.id, params.id))
+    .where(eq(schema.products.id, id))
     .get();
 
   if (!product) {
@@ -46,6 +54,14 @@ const updateSchema = z.object({
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
+    const id = params.id;
+    if (!id) {
+      return new Response(JSON.stringify({ error: 'ID produk wajib diisi' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const body = await request.json();
     const parsed = updateSchema.safeParse(body);
 
@@ -83,7 +99,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
         isActive: data.isActive ?? true,
         updatedAt: new Date().toISOString(),
       })
-      .where(eq(schema.products.id, params.id))
+      .where(eq(schema.products.id, id))
       .run();
 
     return new Response(
@@ -101,10 +117,18 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
 export const DELETE: APIRoute = async ({ params }) => {
   try {
+    const id = params.id;
+    if (!id) {
+      return new Response(JSON.stringify({ error: 'ID produk wajib diisi' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const product = db
       .select()
       .from(schema.products)
-      .where(eq(schema.products.id, params.id))
+      .where(eq(schema.products.id, id))
       .get();
 
     if (!product) {
@@ -118,7 +142,7 @@ export const DELETE: APIRoute = async ({ params }) => {
       deleteFile(product.mainImage);
     }
 
-    db.delete(schema.products).where(eq(schema.products.id, params.id)).run();
+    db.delete(schema.products).where(eq(schema.products.id, id)).run();
 
     return new Response(
       JSON.stringify({ success: true }),

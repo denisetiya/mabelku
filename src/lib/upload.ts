@@ -13,7 +13,7 @@ export interface UploadResult {
   filename: string;
 }
 
-export function saveFile(file: File): UploadResult {
+export async function saveFile(file: File): Promise<UploadResult> {
   if (!ALLOWED_TYPES.includes(file.type)) {
     throw new Error('Tipe file tidak didukung. Hanya JPEG, PNG, WebP, GIF.');
   }
@@ -26,7 +26,7 @@ export function saveFile(file: File): UploadResult {
   const filename = `${randomUUID()}.${ext}`;
   const filepath = join(UPLOAD_DIR, filename);
 
-  const buffer = Buffer.from(file.arrayBuffer());
+  const buffer = Buffer.from(await file.arrayBuffer());
   writeFileSync(filepath, buffer);
 
   return {

@@ -4,9 +4,11 @@ import { db, schema } from '../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { formatRupiah } from '../../../lib/money';
 import { buildWhatsAppLink, buildOrderConfirmationMessage } from '../../../lib/whatsapp';
-import { getStoreSettings } from '../../../lib/store';
 
-const { id } = Astro.params;
+const id = Astro.params.id;
+if (!id) {
+  return Astro.redirect('/admin/pesanan');
+}
 
 const order = db.select().from(schema.orders).where(eq(schema.orders.id, id)).get();
 if (!order) {
@@ -14,7 +16,6 @@ if (!order) {
 }
 
 const items = db.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, id)).all();
-const settings = getStoreSettings();
 
 const statusColors: Record<string, string> = {
   pending: 'bg-amber-100 text-amber-700',
@@ -152,18 +153,20 @@ const statuses = [
               <option value={s.value} selected={order.status === s.value}>{s.label}</option>
             ))}
           </select>
-          <button id="update-status-btn" class="btn-primary w-full text-sm">Update Status</button>
+          <button id="update-status-btn" data-order-id={id} class="btn-primary w-full text-sm">Update Status</button>
           <div id="status-msg" class="hidden mt-3 text-sm text-center"></div>
         </div>
       </div>
     </div>
   </div>
 
-  <script define:vars={{ orderId: id }}>
-    document.getElementById('update-status-btn')?.addEventListener('click', async () => {
-      const status = (document.getElementById('status-select') as HTMLSelectElement).value;
-      const msg = document.getElementById('status-msg')!;
-      const btn = document.getElementById('update-status-btn') as HTMLButtonElement;
+  <script is:inline>
+    document.getElementById('update-status-btn')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      const orderId = btn?.getAttribute('data-order-id') || '';
+      const statusEl = document.getElementById('status-select');
+      const msg = document.getElementById('status-msg');
+      const status = statusEl ? statusEl.value : '';
 
       btn.disabled = true;
       btn.textContent = 'Updating...';
@@ -178,12 +181,10 @@ const statuses = [
       if (result.success) {
         msg.textContent = 'Status berhasil diupdate';
         msg.className = 'mt-3 text-sm text-center text-green-600';
-        msg.classList.remove('hidden');
         setTimeout(() => window.location.reload(), 1000);
       } else {
         msg.textContent = result.error || 'Gagal update status';
         msg.className = 'mt-3 text-sm text-center text-red-600';
-        msg.classList.remove('hidden');
         btn.disabled = false;
         btn.textContent = 'Update Status';
       }

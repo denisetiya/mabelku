@@ -3,7 +3,7 @@ import MainLayout from '../layouts/MainLayout.astro';
 import ProductCard from '../components/product/ProductCard.astro';
 import CategoryCard from '../components/product/CategoryCard.astro';
 import { db, schema } from '../lib/db';
-import { eq, desc } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { getStoreSettings } from '../lib/store';
 import { getProductFallbackImage } from '../lib/images';
 import { formatRupiah } from '../lib/money';
@@ -21,7 +21,7 @@ const categorySlugById = new Map(allCategories.map((c) => [c.id, c.slug]));
 const featuredProducts = db
   .select()
   .from(schema.products)
-  .where(eq(schema.products.isFeatured, true), eq(schema.products.isActive, true))
+  .where(and(eq(schema.products.isFeatured, true), eq(schema.products.isActive, true)))
   .orderBy(desc(schema.products.createdAt))
   .limit(4)
   .all()

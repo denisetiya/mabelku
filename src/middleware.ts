@@ -1,7 +1,7 @@
-import { defineMiddleware } from 'astro:middleware';
 import { isAuthenticated } from './lib/auth';
+import type { MiddlewareHandler } from 'astro';
 
-export const onRequest = defineMiddleware(async (context, next) => {
+export const onRequest: MiddlewareHandler = async (context, next) => {
   const { pathname } = context.url;
 
   const isAdminPage = pathname.startsWith('/admin') && pathname !== '/admin/login';
@@ -23,4 +23,4 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   return next();
-});
+};

@@ -5,7 +5,10 @@ import { db, schema } from '../../lib/db';
 import { eq, and } from 'drizzle-orm';
 import { getCategoryCover } from '../../lib/images';
 
-const { slug } = Astro.params;
+const slug = Astro.params.slug;
+if (!slug) {
+  return Astro.redirect('/404');
+}
 
 const category = db
   .select()

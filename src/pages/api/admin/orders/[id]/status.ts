@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db, schema } from '../../../../../lib/db';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 const statusSchema = z.object({
@@ -9,6 +9,14 @@ const statusSchema = z.object({
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
+    const id = params.id;
+    if (!id) {
+      return new Response(JSON.stringify({ error: 'ID pesanan wajib diisi' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const body = await request.json();
     const parsed = statusSchema.safeParse(body);
 
@@ -22,7 +30,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
     const order = db
       .select()
       .from(schema.orders)
-      .where(eq(schema.orders.id, params.id))
+      .where(eq(schema.orders.id, id))
       .get();
 
     if (!order) {
@@ -36,7 +44,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
       const items = db
         .select()
         .from(schema.orderItems)
-        .where(eq(schema.orderItems.orderId, params.id))
+        .where(eq(schema.orderItems.orderId, id))
         .all();
 
       for (const item of items) {
@@ -55,7 +63,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
         status: parsed.data.status,
         updatedAt: new Date().toISOString(),
       })
-      .where(eq(schema.orders.id, params.id))
+      .where(eq(schema.orders.id, id))
       .run();
 
     return new Response(
@@ -70,5 +78,3 @@ export const PUT: APIRoute = async ({ params, request }) => {
     );
   }
 };
-
-import { sql } from 'drizzle-orm';

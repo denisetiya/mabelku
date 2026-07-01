@@ -1,4 +1,5 @@
 import { db, schema } from './db';
+import { eq } from 'drizzle-orm';
 
 export function getStoreSettings() {
   let settings = db.select().from(schema.storeSettings).get();
@@ -15,7 +16,7 @@ export function updateStoreSettings(data: Partial<typeof schema.storeSettings.$i
   const current = getStoreSettings();
   db.update(schema.storeSettings)
     .set({ ...data, updatedAt: new Date().toISOString() })
-    .where(schema.storeSettings.id.eq(current.id))
+    .where(eq(schema.storeSettings.id, current.id))
     .run();
   return getStoreSettings();
 }

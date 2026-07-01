@@ -2,7 +2,7 @@
 import MainLayout from '../../layouts/MainLayout.astro';
 import ProductCard from '../../components/product/ProductCard.astro';
 import { db, schema } from '../../lib/db';
-import { eq, and, like, desc, asc } from 'drizzle-orm';
+import { eq, and, like, desc, asc, type SQL } from 'drizzle-orm';
 
 const url = Astro.url;
 const search = url.searchParams.get('search') ?? '';
@@ -20,9 +20,9 @@ if (category) {
   conditions.push(eq(schema.categories.slug, category));
 }
 
-const where = and(...conditions);
+const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-const orderClause: Record<string, typeof desc> = {
+const orderClause: Record<string, SQL> = {
   newest: desc(schema.products.createdAt),
   'price-asc': asc(schema.products.price),
   'price-desc': desc(schema.products.price),

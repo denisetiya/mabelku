@@ -98,51 +98,60 @@ const settings = getStoreSettings();
     </form>
   </div>
 
-  <script define:vars={{ settings }}>
+  <script is:inline>
+    const val = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
+    const logo = '{settings.logo ?? ""}';
+
     document.getElementById('settings-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const btn = document.getElementById('save-btn') as HTMLButtonElement;
-      const msg = document.getElementById('save-msg')!;
+      const btn = document.getElementById('save-btn');
+      const msg = document.getElementById('save-msg');
 
       const data = {
-        storeName: (document.getElementById('storeName') as HTMLInputElement).value,
-        whatsappNumber: (document.getElementById('whatsappNumber') as HTMLInputElement).value,
-        email: (document.getElementById('email') as HTMLInputElement).value || null,
-        openingHours: (document.getElementById('openingHours') as HTMLInputElement).value || null,
-        address: (document.getElementById('address') as HTMLTextAreaElement).value || null,
-        googleMapsUrl: (document.getElementById('googleMapsUrl') as HTMLInputElement).value || null,
-        bankAccount: (document.getElementById('bankAccount') as HTMLInputElement).value || null,
-        heroTitle: (document.getElementById('heroTitle') as HTMLInputElement).value || null,
-        heroSubtitle: (document.getElementById('heroSubtitle') as HTMLInputElement).value || null,
-        heroImage: (document.getElementById('heroImage') as HTMLInputElement).value || null,
-        instagramUrl: (document.getElementById('instagramUrl') as HTMLInputElement).value || null,
-        facebookUrl: (document.getElementById('facebookUrl') as HTMLInputElement).value || null,
-        tiktokUrl: (document.getElementById('tiktokUrl') as HTMLInputElement).value || null,
-        aboutText: (document.getElementById('aboutText') as HTMLTextAreaElement).value || null,
-        logo: settings.logo,
+        storeName: val('storeName'),
+        whatsappNumber: val('whatsappNumber'),
+        email: val('email') || null,
+        openingHours: val('openingHours') || null,
+        address: val('address') || null,
+        googleMapsUrl: val('googleMapsUrl') || null,
+        bankAccount: val('bankAccount') || null,
+        heroTitle: val('heroTitle') || null,
+        heroSubtitle: val('heroSubtitle') || null,
+        heroImage: val('heroImage') || null,
+        instagramUrl: val('instagramUrl') || null,
+        facebookUrl: val('facebookUrl') || null,
+        tiktokUrl: val('tiktokUrl') || null,
+        aboutText: val('aboutText') || null,
+        logo: logo || null,
       };
 
       btn.disabled = true;
       btn.textContent = 'Menyimpan...';
 
-      const res = await fetch('/api/admin/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      const result = await res.json();
+      try {
+        const res = await fetch('/api/admin/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        const result = await res.json();
 
-      btn.disabled = false;
-      btn.textContent = 'Simpan Pengaturan';
+        btn.disabled = false;
+        btn.textContent = 'Simpan Pengaturan';
 
-      if (result.success) {
-        msg.textContent = 'Pengaturan berhasil disimpan';
-        msg.classList.remove('hidden');
-        setTimeout(() => msg.classList.add('hidden'), 3000);
-      } else {
-        msg.textContent = result.error || 'Gagal menyimpan';
-        msg.className = 'hidden text-sm text-red-600 flex items-center';
-        msg.classList.remove('hidden');
+        if (result.success) {
+          msg.textContent = 'Pengaturan berhasil disimpan';
+          msg.className = 'text-sm text-green-600 flex items-center';
+          setTimeout(() => { msg.className = 'hidden text-sm text-green-600 flex items-center'; }, 3000);
+        } else {
+          msg.textContent = result.error || 'Gagal menyimpan';
+          msg.className = 'text-sm text-red-600 flex items-center';
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'Simpan Pengaturan';
+        msg.textContent = 'Terjadi kesalahan jaringan';
+        msg.className = 'text-sm text-red-600 flex items-center';
       }
     });
   </script>

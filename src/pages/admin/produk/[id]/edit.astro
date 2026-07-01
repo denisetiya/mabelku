@@ -4,7 +4,10 @@ import { db, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { parseImages } from '../../../../lib/product';
 
-const { id } = Astro.params;
+const id = Astro.params.id;
+if (!id) {
+  return Astro.redirect('/admin/produk');
+}
 
 const product = db.select().from(schema.products).where(eq(schema.products.id, id)).get();
 if (!product) {

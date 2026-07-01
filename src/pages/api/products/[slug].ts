@@ -5,6 +5,12 @@ import { getEffectivePrice, parseImages } from '../../../lib/product';
 
 export const GET: APIRoute = async ({ params }) => {
   const slug = params.slug;
+  if (!slug) {
+    return new Response(JSON.stringify({ error: 'Slug produk wajib diisi' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
   const product = db
     .select()

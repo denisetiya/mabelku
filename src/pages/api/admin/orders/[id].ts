@@ -4,10 +4,18 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 export const GET: APIRoute = async ({ params }) => {
+  const id = params.id;
+  if (!id) {
+    return new Response(JSON.stringify({ error: 'ID pesanan wajib diisi' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const order = db
     .select()
     .from(schema.orders)
-    .where(eq(schema.orders.id, params.id))
+    .where(eq(schema.orders.id, id))
     .get();
 
   if (!order) {
@@ -20,7 +28,7 @@ export const GET: APIRoute = async ({ params }) => {
   const items = db
     .select()
     .from(schema.orderItems)
-    .where(eq(schema.orderItems.orderId, params.id))
+    .where(eq(schema.orderItems.orderId, id))
     .all();
 
   return new Response(

@@ -13,7 +13,7 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    const result = saveFile(file);
+    const result = await saveFile(file);
 
     return new Response(JSON.stringify({ success: true, url: result.url }), {
       headers: { 'Content-Type': 'application/json' },

@@ -6,7 +6,10 @@ import { formatRupiah } from '../../../lib/money';
 import { buildWhatsAppLink, buildOrderConfirmationMessage } from '../../../lib/whatsapp';
 import { getStoreSettings } from '../../../lib/store';
 
-const { orderCode } = Astro.params;
+const orderCode = Astro.params.orderCode;
+if (!orderCode) {
+  return Astro.redirect('/404');
+}
 
 const order = db
   .select()

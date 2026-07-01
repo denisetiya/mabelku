@@ -9,7 +9,10 @@ import { buildWhatsAppLink, buildProductInquiryMessage } from '../../lib/whatsap
 import { getStoreSettings } from '../../lib/store';
 import ProductCard from '../../components/product/ProductCard.astro';
 
-const { slug } = Astro.params;
+const slug = Astro.params.slug;
+if (!slug) {
+  return Astro.redirect('/404');
+}
 
 const product = db
   .select()

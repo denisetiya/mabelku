@@ -1,0 +1,305 @@
+---
+import MainLayout from '../../layouts/MainLayout.astro';
+import { db, schema } from '../../lib/db';
+import { eq, and } from 'drizzle-orm';
+import { getEffectivePrice, getDiscountPercent, parseImages } from '../../lib/product';
+import { getProductFallbackImage } from '../../lib/images';
+import { formatRupiah } from '../../lib/money';
+import { buildWhatsAppLink, buildProductInquiryMessage } from '../../lib/whatsapp';
+import { getStoreSettings } from '../../lib/store';
+import ProductCard from '../../components/product/ProductCard.astro';
+
+const { slug } = Astro.params;
+
+const product = db
+  .select()
+  .from(schema.products)
+  .where(and(eq(schema.products.slug, slug), eq(schema.products.isActive, true)))
+  .get();
+
+if (!product) {
+  return Astro.redirect('/404');
+}
+
+const category = db
+  .select()
+  .from(schema.categories)
+  .where(eq(schema.categories.id, product.categoryId))
+  .get();
+
+const relatedProducts = db
+  .select()
+  .from(schema.products)
+  .where(
+    and(
+      eq(schema.products.categoryId, product.categoryId),
+      eq(schema.products.isActive, true),
+    ),
+  )
+  .limit(4)
+  .all()
+  .filter((p) => p.id !== product.id)
+  .slice(0, 3)
+  .map((p) => ({ ...p, categorySlug: category?.slug ?? null }));
+
+const effectivePrice = getEffectivePrice(product.price, product.discountPrice);
+const discountPercent = getDiscountPercent(product.price, product.discountPrice);
+const fallbackImg = getProductFallbackImage(product.slug, category?.slug);
+const images = parseImages(product.images);
+const allImages = product.mainImage
+  ? [product.mainImage, ...images]
+  : (images.length > 0 ? images : [fallbackImg]);
+const settings = getStoreSettings();
+const outOfStock = product.stock <= 0;
+const lowStock = product.stock > 0 && product.stock <= 5;
+
+const schemaOrgImage = allImages.length > 0 ? allImages : undefined;
+
+const specs = [
+  { label: 'Material', value: product.material },
+  { label: 'Warna', value: product.color },
+  { label: 'Dimensi', value: product.dimension },
+  { label: 'Berat', value: product.weight ? `${product.weight} kg` : null },
+  { label: 'SKU', value: product.sku },
+  { label: 'Kategori', value: category?.name },
+].filter((s) => s.value);
+
+const schemaOrg = {
+  '@context': 'https://schema.org',
+  '@type': 'Product',
+  name: product.name,
+  description: product.description || product.shortDescription || '',
+  image: schemaOrgImage,
+  sku: product.sku || '',
+  brand: { '@type': 'Brand', name: settings.storeName },
+  offers: {
+    '@type': 'Offer',
+    price: effectivePrice,
+    priceCurrency: 'IDR',
+    availability: outOfStock ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock',
+  },
+};
+---
+
+<MainLayout
+  title={`${product.name} — ${settings.storeName}`}
+  description={product.shortDescription || product.description?.slice(0, 160) || ''}
+  image={product.mainImage ?? undefined}
+>
+  <script type="application/ld+json" set:html={JSON.stringify(schemaOrg)} />
+
+  <section class="container-page pt-10 pb-4">
+    <nav class="flex items-center gap-2 text-sm text-muted">
+      <a href="/" class="hover:text-ink transition-colors">Beranda</a>
+      <span>/</span>
+      <a href="/produk" class="hover:text-ink transition-colors">Koleksi</a>
+      {category && (
+        <>
+          <span>/</span>
+          <a href={`/kategori/${category.slug}`} class="hover:text-ink transition-colors">{category.name}</a>
+        </>
+      )}
+      <span>/</span>
+      <span class="text-ink">{product.name}</span>
+    </nav>
+  </section>
+
+  <section class="container-page section-tight">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
+      <!-- Gallery -->
+      <div class="lg:col-span-7">
+        {allImages.length > 0 ? (
+          <div class="space-y-4">
+            <div class="aspect-[4/5] rounded-3xl overflow-hidden bg-bone-soft">
+              <img id="main-product-image" src={allImages[0]} alt={product.name} class="w-full h-full object-cover" />
+            </div>
+            {allImages.length > 1 && (
+              <div class="grid grid-cols-5 gap-3">
+                {allImages.slice(0, 5).map((img, i) => (
+                  <button
+                    class="aspect-square rounded-xl overflow-hidden bg-bone-soft border-2 border-transparent hover:border-clay transition-colors"
+                    data-thumbnail={img}
+                  >
+                    <img src={img} alt={`${product.name} ${i + 1}`} class="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div class="aspect-[4/5] rounded-3xl bg-bone-soft flex items-center justify-center">
+            <span class="font-display text-2xl text-muted">No image</span>
+          </div>
+        )}
+      </div>
+
+      <!-- Details -->
+      <div class="lg:col-span-5 lg:sticky lg:top-28 lg:self-start">
+        {category && (
+          <a href={`/kategori/${category.slug}`} class="eyebrow inline-block hover:text-clay-dark transition-colors">
+            {category.name}
+          </a>
+        )}
+
+        <h1 class="display-md mt-3 mb-6 text-balance">{product.name}</h1>
+
+        <div class="flex items-baseline gap-3 mb-6">
+          {discountPercent > 0 && (
+            <span class="font-display text-xl text-muted-soft line-through">{formatRupiah(product.price)}</span>
+          )}
+          <span class="font-display text-3xl md:text-4xl text-ink">{formatRupiah(effectivePrice)}</span>
+          {discountPercent > 0 && (
+            <span class="pill-clay">-{discountPercent}%</span>
+          )}
+        </div>
+
+        <div class="flex items-center gap-3 mb-8 text-sm">
+          {outOfStock && <span class="pill bg-error/10 text-error">Stok Habis</span>}
+          {lowStock && <span class="pill-clay">Sisa {product.stock} — hampir habis</span>}
+          {!outOfStock && !lowStock && <span class="pill-olive">Tersedia · siap kirim</span>}
+        </div>
+
+        {product.shortDescription && (
+          <p class="body-base mb-8 text-pretty">{product.shortDescription}</p>
+        )}
+
+        {!outOfStock && (
+          <div class="space-y-4 mb-8">
+            <div class="flex items-center gap-4">
+              <div class="inline-flex items-center border border-line rounded-full overflow-hidden">
+                <button class="w-10 h-10 text-ink/70 hover:bg-bone-soft transition-colors" data-qty-minus>−</button>
+                <input type="number" id="qty-input" value="1" min="1" max={product.stock} class="w-12 text-center border-0 focus:ring-0 bg-transparent font-medium" />
+                <button class="w-10 h-10 text-ink/70 hover:bg-bone-soft transition-colors" data-qty-plus>+</button>
+              </div>
+              <p class="text-xs text-muted">{product.stock} tersedia</p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-2">
+              <button
+                class="btn-primary btn-lg flex-1"
+                data-add-to-cart
+                data-product-id={product.id}
+                data-product-name={product.name}
+                data-product-slug={product.slug}
+                data-product-price={product.price}
+                data-product-discount={product.discountPrice ?? ''}
+                data-product-image={product.mainImage ?? ''}
+                data-product-stock={product.stock}
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+                Tambah ke Keranjang
+              </button>
+              <a
+                href={buildWhatsAppLink(settings.whatsappNumber, buildProductInquiryMessage(product.name, product.slug, effectivePrice))}
+                target="_blank"
+                rel="noopener"
+                class="btn-outline btn-lg"
+              >
+                Tanya via WA
+              </a>
+            </div>
+          </div>
+        )}
+
+        {specs.length > 0 && (
+          <div class="border-t border-line pt-6 mt-6">
+            <p class="eyebrow mb-4">Spesifikasi</p>
+            <dl class="grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
+              {specs.map((spec) => (
+                <div>
+                  <dt class="text-muted text-xs uppercase tracking-wider mb-1">{spec.label}</dt>
+                  <dd class="text-ink font-medium">{spec.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )}
+
+        <div class="border-t border-line pt-6 mt-6 grid grid-cols-3 gap-4 text-center">
+          <div>
+            <svg class="w-5 h-5 mx-auto mb-2 text-clay" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+            <p class="text-xs text-muted">Packing kayu</p>
+          </div>
+          <div>
+            <svg class="w-5 h-5 mx-auto mb-2 text-clay" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            <p class="text-xs text-muted">Garansi seumur hidup</p>
+          </div>
+          <div>
+            <svg class="w-5 h-5 mx-auto mb-2 text-clay" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <p class="text-xs text-muted">Kirim nasional</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {product.description && (
+      <div class="mt-20 max-w-3xl">
+        <p class="eyebrow mb-4">Cerita Produk</p>
+        <div class="font-display text-xl md:text-2xl text-ink/80 leading-relaxed whitespace-pre-wrap text-pretty">
+          {product.description}
+        </div>
+      </div>
+    )}
+  </section>
+
+  {relatedProducts.length > 0 && (
+    <section class="section bg-bone-soft">
+      <div class="container-page">
+        <div class="mb-12">
+          <p class="eyebrow mb-3">Lainnya</p>
+          <h2 class="display-md">Mungkin Anda juga suka.</h2>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-12">
+          {relatedProducts.map((p) => <ProductCard product={p} />)}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <script>
+    import { addToCart } from '../../components/cart/store';
+
+    document.querySelectorAll('[data-thumbnail]')?.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const src = btn.getAttribute('data-thumbnail');
+        const main = document.getElementById('main-product-image');
+        if (main && src) main.setAttribute('src', src);
+        document.querySelectorAll('[data-thumbnail]').forEach((b) => b.classList.remove('border-clay'));
+        btn.classList.add('border-clay');
+      });
+    });
+
+    const qtyInput = document.getElementById('qty-input') as HTMLInputElement | null;
+    document.querySelector('[data-qty-minus]')?.addEventListener('click', () => {
+      if (qtyInput) qtyInput.value = String(Math.max(1, parseInt(qtyInput.value, 10) - 1));
+    });
+    document.querySelector('[data-qty-plus]')?.addEventListener('click', () => {
+      if (qtyInput) {
+        const max = parseInt(qtyInput.max, 10);
+        qtyInput.value = String(Math.min(max, parseInt(qtyInput.value, 10) + 1));
+      }
+    });
+
+    document.querySelector('[data-add-to-cart]')?.addEventListener('click', (e) => {
+      const btn = e.currentTarget as HTMLElement;
+      const qty = qtyInput ? parseInt(qtyInput.value, 10) : 1;
+      addToCart({
+        id: btn.dataset.productId!,
+        name: btn.dataset.productName!,
+        slug: btn.dataset.productSlug!,
+        price: parseInt(btn.dataset.productPrice!, 10),
+        discountPrice: btn.dataset.productDiscount ? parseInt(btn.dataset.productDiscount, 10) : null,
+        mainImage: btn.dataset.productImage || null,
+        stock: parseInt(btn.dataset.productStock!, 10),
+      }, qty);
+
+      const toast = document.createElement('div');
+      toast.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-ink text-bone px-6 py-3.5 rounded-full shadow-lg flex items-center gap-2 fade-in';
+      toast.innerHTML = `<svg class="w-4 h-4 text-clay" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span class="text-sm">Ditambahkan ke keranjang</span>`;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2500);
+    });
+  </script>
+</MainLayout>

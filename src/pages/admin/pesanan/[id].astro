@@ -1,0 +1,192 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { db, schema } from '../../../lib/db';
+import { eq } from 'drizzle-orm';
+import { formatRupiah } from '../../../lib/money';
+import { buildWhatsAppLink, buildOrderConfirmationMessage } from '../../../lib/whatsapp';
+import { getStoreSettings } from '../../../lib/store';
+
+const { id } = Astro.params;
+
+const order = db.select().from(schema.orders).where(eq(schema.orders.id, id)).get();
+if (!order) {
+  return Astro.redirect('/admin/pesanan');
+}
+
+const items = db.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, id)).all();
+const settings = getStoreSettings();
+
+const statusColors: Record<string, string> = {
+  pending: 'bg-amber-100 text-amber-700',
+  processing: 'bg-blue-100 text-blue-700',
+  shipped: 'bg-purple-100 text-purple-700',
+  completed: 'bg-green-100 text-green-700',
+  cancelled: 'bg-red-100 text-red-700',
+};
+const statusLabels: Record<string, string> = {
+  pending: 'Menunggu Konfirmasi',
+  processing: 'Diproses',
+  shipped: 'Dikirim',
+  completed: 'Selesai',
+  cancelled: 'Dibatalkan',
+};
+const paymentLabels: Record<string, string> = {
+  bank_transfer: 'Transfer Bank',
+  cod: 'Bayar di Tempat (COD)',
+  whatsapp_confirmation: 'Konfirmasi via WhatsApp',
+};
+
+const statuses = [
+  { value: 'pending', label: 'Menunggu Konfirmasi' },
+  { value: 'processing', label: 'Diproses' },
+  { value: 'shipped', label: 'Dikirim' },
+  { value: 'completed', label: 'Selesai' },
+  { value: 'cancelled', label: 'Dibatalkan' },
+];
+---
+
+<AdminLayout title={`Pesanan ${order.orderCode}`} active="/admin/pesanan">
+  <div class="space-y-6">
+    <div class="flex items-center gap-4">
+      <a href="/admin/pesanan" class="text-primary hover:text-accent">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+      </a>
+      <div class="flex-1">
+        <h1 class="font-serif text-2xl font-bold text-primary">{order.orderCode}</h1>
+        <p class="text-muted text-sm mt-1">{new Date(order.createdAt).toLocaleString('id-ID')}</p>
+      </div>
+      <span class={`badge ${statusColors[order.status]} text-sm px-3 py-1`}>{statusLabels[order.status]}</span>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 space-y-6">
+        <div class="card-static p-6">
+          <h2 class="font-serif font-bold text-primary mb-4">Item Pesanan</h2>
+          <div class="space-y-3">
+            {items.map((item) => (
+              <div class="flex justify-between items-center py-3 border-b border-border last:border-0">
+                <div>
+                  <p class="font-medium text-primary text-sm">{item.productName}</p>
+                  <p class="text-muted text-xs">{item.quantity} x {formatRupiah(item.productPrice)}</p>
+                </div>
+                <p class="font-semibold text-primary">{formatRupiah(item.total)}</p>
+              </div>
+            ))}
+          </div>
+          <div class="border-t border-border mt-4 pt-4 space-y-2">
+            <div class="flex justify-between text-muted text-sm">
+              <span>Subtotal</span>
+              <span>{formatRupiah(order.subtotal)}</span>
+            </div>
+            <div class="flex justify-between text-muted text-sm">
+              <span>Pengiriman</span>
+              <span>{order.shippingCost > 0 ? formatRupiah(order.shippingCost) : '-'}</span>
+            </div>
+            <div class="flex justify-between text-lg font-bold text-primary border-t border-border pt-2">
+              <span>Total</span>
+              <span>{formatRupiah(order.total)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-6">
+        <div class="card-static p-6">
+          <h2 class="font-serif font-bold text-primary mb-4">Data Pelanggan</h2>
+          <dl class="space-y-3 text-sm">
+            <div>
+              <dt class="text-muted">Nama</dt>
+              <dd class="font-medium text-primary">{order.customerName}</dd>
+            </div>
+            <div>
+              <dt class="text-muted">WhatsApp</dt>
+              <dd class="font-medium text-primary">{order.customerPhone}</dd>
+            </div>
+            {order.customerEmail && (
+              <div>
+                <dt class="text-muted">Email</dt>
+                <dd class="font-medium text-primary">{order.customerEmail}</dd>
+              </div>
+            )}
+            <div>
+              <dt class="text-muted">Alamat</dt>
+              <dd class="font-medium text-primary">{order.address}</dd>
+            </div>
+            {order.city && (
+              <div>
+                <dt class="text-muted">Kota</dt>
+                <dd class="font-medium text-primary">{order.city}</dd>
+              </div>
+            )}
+            {order.note && (
+              <div>
+                <dt class="text-muted">Catatan</dt>
+                <dd class="font-medium text-primary">{order.note}</dd>
+              </div>
+            )}
+            <div>
+              <dt class="text-muted">Pembayaran</dt>
+              <dd class="font-medium text-primary">{paymentLabels[order.paymentMethod]}</dd>
+            </div>
+          </dl>
+
+          <a
+            href={buildWhatsAppLink(order.customerPhone, buildOrderConfirmationMessage(order.orderCode, order.total, order.customerName))}
+            target="_blank"
+            rel="noopener"
+            class="btn-secondary w-full mt-4 text-sm"
+          >
+            <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347" />
+            </svg>
+            Hubungi Pelanggan
+          </a>
+        </div>
+
+        <div class="card-static p-6">
+          <h2 class="font-serif font-bold text-primary mb-4">Ubah Status</h2>
+          <select id="status-select" class="input mb-3">
+            {statuses.map((s) => (
+              <option value={s.value} selected={order.status === s.value}>{s.label}</option>
+            ))}
+          </select>
+          <button id="update-status-btn" class="btn-primary w-full text-sm">Update Status</button>
+          <div id="status-msg" class="hidden mt-3 text-sm text-center"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script define:vars={{ orderId: id }}>
+    document.getElementById('update-status-btn')?.addEventListener('click', async () => {
+      const status = (document.getElementById('status-select') as HTMLSelectElement).value;
+      const msg = document.getElementById('status-msg')!;
+      const btn = document.getElementById('update-status-btn') as HTMLButtonElement;
+
+      btn.disabled = true;
+      btn.textContent = 'Updating...';
+
+      const res = await fetch(`/api/admin/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      const result = await res.json();
+
+      if (result.success) {
+        msg.textContent = 'Status berhasil diupdate';
+        msg.className = 'mt-3 text-sm text-center text-green-600';
+        msg.classList.remove('hidden');
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        msg.textContent = result.error || 'Gagal update status';
+        msg.className = 'mt-3 text-sm text-center text-red-600';
+        msg.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Update Status';
+      }
+    });
+  </script>
+</AdminLayout>

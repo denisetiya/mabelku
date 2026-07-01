@@ -1,0 +1,149 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getStoreSettings } from '../../lib/store';
+
+const settings = getStoreSettings();
+---
+
+<AdminLayout title="Pengaturan Toko" active="/admin/pengaturan">
+  <div class="space-y-6">
+    <div>
+      <h1 class="font-serif text-2xl font-bold text-primary">Pengaturan Toko</h1>
+      <p class="text-muted text-sm mt-1">Kelola informasi toko Anda</p>
+    </div>
+
+    <form id="settings-form" class="space-y-6">
+      <div class="card-static p-6">
+        <h2 class="font-serif font-bold text-primary mb-4">Informasi Toko</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="label">Nama Toko *</label>
+            <input type="text" id="storeName" required class="input" value={settings.storeName} />
+          </div>
+          <div>
+            <label class="label">Nomor WhatsApp *</label>
+            <input type="text" id="whatsappNumber" required class="input" value={settings.whatsappNumber} />
+          </div>
+          <div>
+            <label class="label">Email</label>
+            <input type="email" id="email" class="input" value={settings.email ?? ''} />
+          </div>
+          <div>
+            <label class="label">Jam Operasional</label>
+            <input type="text" id="openingHours" class="input" value={settings.openingHours ?? ''} placeholder="Senin-Sabtu, 09:00-17:00" />
+          </div>
+          <div class="md:col-span-2">
+            <label class="label">Alamat</label>
+            <textarea id="address" rows="2" class="input">{settings.address ?? ''}</textarea>
+          </div>
+          <div>
+            <label class="label">Link Google Maps</label>
+            <input type="text" id="googleMapsUrl" class="input" value={settings.googleMapsUrl ?? ''} placeholder="https://maps.google.com/..." />
+          </div>
+          <div>
+            <label class="label">Rekening Bank</label>
+            <input type="text" id="bankAccount" class="input" value={settings.bankAccount ?? ''} placeholder="BCA 1234567890 a.n. Toko" />
+          </div>
+        </div>
+      </div>
+
+      <div class="card-static p-6">
+        <h2 class="font-serif font-bold text-primary mb-4">Homepage Hero</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="label">Hero Title</label>
+            <input type="text" id="heroTitle" class="input" value={settings.heroTitle ?? ''} />
+          </div>
+          <div>
+            <label class="label">Hero Subtitle</label>
+            <input type="text" id="heroSubtitle" class="input" value={settings.heroSubtitle ?? ''} />
+          </div>
+          <div class="md:col-span-2">
+            <label class="label">Hero Image URL</label>
+            <input type="text" id="heroImage" class="input" value={settings.heroImage ?? ''} placeholder="/uploads/..." />
+          </div>
+        </div>
+      </div>
+
+      <div class="card-static p-6">
+        <h2 class="font-serif font-bold text-primary mb-4">Sosial Media</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="label">Instagram URL</label>
+            <input type="text" id="instagramUrl" class="input" value={settings.instagramUrl ?? ''} />
+          </div>
+          <div>
+            <label class="label">Facebook URL</label>
+            <input type="text" id="facebookUrl" class="input" value={settings.facebookUrl ?? ''} />
+          </div>
+          <div>
+            <label class="label">TikTok URL</label>
+            <input type="text" id="tiktokUrl" class="input" value={settings.tiktokUrl ?? ''} />
+          </div>
+        </div>
+      </div>
+
+      <div class="card-static p-6">
+        <h2 class="font-serif font-bold text-primary mb-4">Halaman Tentang</h2>
+        <div>
+          <label class="label">Teks Tentang Toko</label>
+          <textarea id="aboutText" rows="4" class="input">{settings.aboutText ?? ''}</textarea>
+        </div>
+      </div>
+
+      <div class="flex gap-3">
+        <button type="submit" id="save-btn" class="btn-primary">Simpan Pengaturan</button>
+        <div id="save-msg" class="hidden text-sm text-green-600 flex items-center"></div>
+      </div>
+    </form>
+  </div>
+
+  <script define:vars={{ settings }}>
+    document.getElementById('settings-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('save-btn') as HTMLButtonElement;
+      const msg = document.getElementById('save-msg')!;
+
+      const data = {
+        storeName: (document.getElementById('storeName') as HTMLInputElement).value,
+        whatsappNumber: (document.getElementById('whatsappNumber') as HTMLInputElement).value,
+        email: (document.getElementById('email') as HTMLInputElement).value || null,
+        openingHours: (document.getElementById('openingHours') as HTMLInputElement).value || null,
+        address: (document.getElementById('address') as HTMLTextAreaElement).value || null,
+        googleMapsUrl: (document.getElementById('googleMapsUrl') as HTMLInputElement).value || null,
+        bankAccount: (document.getElementById('bankAccount') as HTMLInputElement).value || null,
+        heroTitle: (document.getElementById('heroTitle') as HTMLInputElement).value || null,
+        heroSubtitle: (document.getElementById('heroSubtitle') as HTMLInputElement).value || null,
+        heroImage: (document.getElementById('heroImage') as HTMLInputElement).value || null,
+        instagramUrl: (document.getElementById('instagramUrl') as HTMLInputElement).value || null,
+        facebookUrl: (document.getElementById('facebookUrl') as HTMLInputElement).value || null,
+        tiktokUrl: (document.getElementById('tiktokUrl') as HTMLInputElement).value || null,
+        aboutText: (document.getElementById('aboutText') as HTMLTextAreaElement).value || null,
+        logo: settings.logo,
+      };
+
+      btn.disabled = true;
+      btn.textContent = 'Menyimpan...';
+
+      const res = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
+
+      btn.disabled = false;
+      btn.textContent = 'Simpan Pengaturan';
+
+      if (result.success) {
+        msg.textContent = 'Pengaturan berhasil disimpan';
+        msg.classList.remove('hidden');
+        setTimeout(() => msg.classList.add('hidden'), 3000);
+      } else {
+        msg.textContent = result.error || 'Gagal menyimpan';
+        msg.className = 'hidden text-sm text-red-600 flex items-center';
+        msg.classList.remove('hidden');
+      }
+    });
+  </script>
+</AdminLayout>

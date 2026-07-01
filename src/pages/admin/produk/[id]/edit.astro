@@ -1,0 +1,225 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import { db, schema } from '../../../../lib/db';
+import { eq } from 'drizzle-orm';
+import { parseImages } from '../../../../lib/product';
+
+const { id } = Astro.params;
+
+const product = db.select().from(schema.products).where(eq(schema.products.id, id)).get();
+if (!product) {
+  return Astro.redirect('/admin/produk');
+}
+
+const categories = db.select().from(schema.categories).all();
+const images = parseImages(product.images);
+const allImages = product.mainImage ? [product.mainImage, ...images] : images;
+---
+
+<AdminLayout title="Edit Produk" active="/admin/produk">
+  <div class="space-y-6">
+    <div class="flex items-center gap-4">
+      <a href="/admin/produk" class="text-primary hover:text-accent">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+      </a>
+      <div>
+        <h1 class="font-serif text-2xl font-bold text-primary">Edit Produk</h1>
+        <p class="text-muted text-sm mt-1">{product.name}</p>
+      </div>
+    </div>
+
+    <form id="product-form" class="card-static p-6 space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="md:col-span-2">
+          <label class="label">Nama Produk *</label>
+          <input type="text" id="name" required class="input" value={product.name} />
+        </div>
+        <div>
+          <label class="label">SKU</label>
+          <input type="text" id="sku" class="input" value={product.sku ?? ''} />
+        </div>
+        <div>
+          <label class="label">Kategori *</label>
+          <select id="categoryId" required class="input">
+            <option value="">Pilih Kategori</option>
+            {categories.map((cat) => (
+              <option value={cat.id} selected={product.categoryId === cat.id}>{cat.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label class="label">Harga (Rp) *</label>
+          <input type="number" id="price" required min="1" class="input" value={product.price} />
+        </div>
+        <div>
+          <label class="label">Harga Diskon (Rp)</label>
+          <input type="number" id="discountPrice" min="0" class="input" value={product.discountPrice ?? ''} />
+        </div>
+        <div>
+          <label class="label">Stok *</label>
+          <input type="number" id="stock" required min="0" class="input" value={product.stock} />
+        </div>
+        <div>
+          <label class="label">Berat (kg)</label>
+          <input type="number" id="weight" min="0" class="input" value={product.weight ?? ''} />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="label">Material</label>
+          <input type="text" id="material" class="input" value={product.material ?? ''} />
+        </div>
+        <div>
+          <label class="label">Warna</label>
+          <input type="text" id="color" class="input" value={product.color ?? ''} />
+        </div>
+        <div>
+          <label class="label">Dimensi</label>
+          <input type="text" id="dimension" class="input" value={product.dimension ?? ''} />
+        </div>
+      </div>
+
+      <div>
+        <label class="label">Deskripsi Pendek</label>
+        <textarea id="shortDescription" rows="2" class="input">{product.shortDescription ?? ''}</textarea>
+      </div>
+
+      <div>
+        <label class="label">Deskripsi Lengkap</label>
+        <textarea id="description" rows="5" class="input">{product.description ?? ''}</textarea>
+      </div>
+
+      <div>
+        <label class="label">Foto Produk</label>
+        <div class="border-2 border-dashed border-border-strong rounded-lg p-6 text-center cursor-pointer hover:bg-muted-bg transition-colors" id="upload-zone">
+          <input type="file" id="file-input" accept="image/*" multiple class="hidden" />
+          <svg class="w-10 h-10 mx-auto text-muted mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+          <p class="text-muted text-sm">Klik untuk upload gambar tambahan</p>
+        </div>
+        <div id="image-preview" class="grid grid-cols-4 gap-3 mt-4"></div>
+        <div id="main-image-field">
+          <label class="label mt-3">Foto Utama</label>
+          <select id="mainImage" class="input"></select>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-4">
+        <label class="flex items-center gap-2">
+          <input type="checkbox" id="isFeatured" class="w-4 h-4 text-accent" checked={product.isFeatured} />
+          <span class="text-sm text-primary">Produk Unggulan</span>
+        </label>
+        <label class="flex items-center gap-2">
+          <input type="checkbox" id="isActive" class="w-4 h-4 text-accent" checked={product.isActive} />
+          <span class="text-sm text-primary">Produk Aktif</span>
+        </label>
+      </div>
+
+      <div class="flex gap-3">
+        <button type="submit" id="submit-btn" class="btn-primary">Update Produk</button>
+        <a href="/admin/produk" class="btn-secondary">Batal</a>
+      </div>
+    </form>
+  </div>
+
+  <script define:vars={{ allImages, productId: id }}>
+    let uploadedImages = [...allImages];
+
+    const uploadZone = document.getElementById('upload-zone')!;
+    const fileInput = document.getElementById('file-input') as HTMLInputElement;
+    const preview = document.getElementById('image-preview')!;
+    const mainImageSelect = document.getElementById('mainImage') as HTMLSelectElement;
+    let currentMainImage = '';
+
+    uploadZone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', async () => {
+      for (const file of fileInput.files!) {
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+          const res = await fetch('/api/admin/upload', { method: 'POST', body: formData });
+          const data = await res.json();
+          if (data.success) {
+            uploadedImages.push(data.url);
+            renderPreviews();
+          }
+        } catch {}
+      }
+      fileInput.value = '';
+    });
+
+    function renderPreviews() {
+      preview.innerHTML = uploadedImages.map((url: string, i: number) => `
+        <div class="relative aspect-square rounded-lg overflow-hidden bg-muted-bg group">
+          <img src="${url}" alt="" class="w-full h-full object-cover" />
+          <button type="button" data-remove="${i}" class="absolute top-1 right-1 bg-destructive text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">x</button>
+        </div>
+      `).join('');
+
+      preview.querySelectorAll('[data-remove]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt((btn as HTMLElement).dataset.remove!, 10);
+          uploadedImages.splice(idx, 1);
+          renderPreviews();
+        });
+      });
+
+      mainImageSelect.innerHTML = uploadedImages.map((url: string, i: number) => `<option value="${url}" ${i === 0 ? 'selected' : ''}>Foto ${i + 1}</option>`).join('');
+      currentMainImage = mainImageSelect.value;
+    }
+
+    renderPreviews();
+
+    document.getElementById('product-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submit-btn') as HTMLButtonElement;
+
+      const data = {
+        name: (document.getElementById('name') as HTMLInputElement).value,
+        sku: (document.getElementById('sku') as HTMLInputElement).value || null,
+        shortDescription: (document.getElementById('shortDescription') as HTMLTextAreaElement).value || null,
+        description: (document.getElementById('description') as HTMLTextAreaElement).value || null,
+        price: parseInt((document.getElementById('price') as HTMLInputElement).value, 10),
+        discountPrice: (document.getElementById('discountPrice') as HTMLInputElement).value ? parseInt((document.getElementById('discountPrice') as HTMLInputElement).value, 10) : null,
+        stock: parseInt((document.getElementById('stock') as HTMLInputElement).value, 10),
+        material: (document.getElementById('material') as HTMLInputElement).value || null,
+        color: (document.getElementById('color') as HTMLInputElement).value || null,
+        dimension: (document.getElementById('dimension') as HTMLInputElement).value || null,
+        weight: (document.getElementById('weight') as HTMLInputElement).value ? parseInt((document.getElementById('weight') as HTMLInputElement).value, 10) : null,
+        categoryId: (document.getElementById('categoryId') as HTMLSelectElement).value,
+        mainImage: mainImageSelect.value || uploadedImages[0] || null,
+        images: uploadedImages,
+        isFeatured: (document.getElementById('isFeatured') as HTMLInputElement).checked,
+        isActive: (document.getElementById('isActive') as HTMLInputElement).checked,
+      };
+
+      btn.disabled = true;
+      btn.textContent = 'Updating...';
+
+      try {
+        const res = await fetch(`/api/admin/products/${productId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        const result = await res.json();
+        if (result.success) {
+          window.location.href = '/admin/produk';
+        } else {
+          alert(result.error || 'Gagal update');
+          btn.disabled = false;
+          btn.textContent = 'Update Produk';
+        }
+      } catch {
+        alert('Terjadi kesalahan');
+        btn.disabled = false;
+        btn.textContent = 'Update Produk';
+      }
+    });
+  </script>
+</AdminLayout>

@@ -1,0 +1,127 @@
+---
+import { db, schema } from '../../lib/db';
+import { eq } from 'drizzle-orm';
+
+interface Props {
+  settings: {
+    storeName: string;
+    logo: string | null;
+  };
+}
+
+const { settings } = Astro.props;
+const categories = db
+  .select()
+  .from(schema.categories)
+  .where(eq(schema.categories.isActive, true))
+  .all();
+
+const navLinks = [
+  { href: '/', label: 'Beranda' },
+  { href: '/produk', label: 'Koleksi' },
+  { href: '/tentang', label: 'Cerita' },
+  { href: '/kontak', label: 'Kontak' },
+];
+---
+
+<header class="sticky top-0 z-50 bg-bone/80 backdrop-blur-xl border-b border-line">
+  <div class="container-page">
+    <div class="flex items-center justify-between h-20">
+      <a href="/" class="flex items-center gap-2.5 group">
+        {settings.logo ? (
+          <img src={settings.logo} alt={settings.storeName} class="h-9 w-auto" />
+        ) : (
+          <>
+            <span class="w-9 h-9 rounded-full bg-ink flex items-center justify-center text-bone font-display text-lg">M</span>
+            <span class="font-display text-2xl tracking-tight">{settings.storeName.replace('Ku', '')}<span class="text-clay">Ku</span></span>
+          </>
+        )}
+      </a>
+
+      <nav class="hidden lg:flex items-center gap-1">
+        {navLinks.map((link) => (
+          <a
+            href={link.href}
+            class="px-4 py-2 text-sm font-medium text-ink/70 hover:text-ink transition-colors duration-200 rounded-full hover:bg-ink/5"
+          >
+            {link.label}
+          </a>
+        ))}
+        {categories.length > 0 && (
+          <div class="relative group">
+            <button class="px-4 py-2 text-sm font-medium text-ink/70 hover:text-ink transition-colors duration-200 rounded-full hover:bg-ink/5 inline-flex items-center gap-1">
+              Kategori
+              <svg class="w-3.5 h-3.5 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <div class="absolute top-full left-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+              <div class="bg-bone border border-line rounded-2xl p-2 min-w-[220px] shadow-lg">
+                {categories.slice(0, 6).map((cat) => (
+                  <a
+                    href={`/kategori/${cat.slug}`}
+                    class="block px-4 py-2.5 text-sm text-ink/80 hover:bg-bone-soft hover:text-ink rounded-xl transition-colors"
+                  >
+                    {cat.name}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </nav>
+
+      <div class="flex items-center gap-1.5">
+        <a href="/produk" class="btn-icon hidden md:inline-flex" aria-label="Cari">
+          <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </a>
+        <a href="/keranjang" class="btn-icon relative" aria-label="Keranjang">
+          <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+          </svg>
+          <span
+            data-cart-count
+            class="absolute -top-0.5 -right-0.5 bg-clay text-bone text-[10px] font-semibold rounded-full w-5 h-5 flex items-center justify-center opacity-0 scale-0 transition-all duration-200"
+          >0</span>
+        </a>
+        <button id="mobile-menu-toggle" class="btn-icon lg:hidden" aria-label="Menu">
+          <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 8h16M4 16h16" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="mobile-menu" class="hidden lg:hidden border-t border-line bg-bone">
+    <nav class="container-page py-6 space-y-1">
+      {navLinks.map((link) => (
+        <a
+          href={link.href}
+          class="block px-4 py-3 text-base font-medium text-ink/80 hover:bg-bone-soft rounded-xl transition-colors"
+        >
+          {link.label}
+        </a>
+      ))}
+      <div class="pt-3 mt-3 border-t border-line">
+        <p class="px-4 py-2 eyebrow">Kategori</p>
+        {categories.map((cat) => (
+          <a
+            href={`/kategori/${cat.slug}`}
+            class="block px-4 py-2.5 text-sm text-ink/70 hover:bg-bone-soft rounded-xl transition-colors"
+          >
+            {cat.name}
+          </a>
+        ))}
+      </div>
+    </nav>
+  </div>
+</header>
+
+<script>
+  document.getElementById('mobile-menu-toggle')?.addEventListener('click', () => {
+    document.getElementById('mobile-menu')?.classList.toggle('hidden');
+  });
+</script>

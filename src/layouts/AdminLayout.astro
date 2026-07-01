@@ -1,0 +1,49 @@
+---
+import '../styles/global.css';
+import AdminSidebar from '../components/admin/Sidebar.astro';
+import AdminTopbar from '../components/admin/Topbar.astro';
+import { getStoreSettings } from '../lib/store';
+import { getAuthenticatedAdmin } from '../lib/auth';
+
+interface Props {
+  title?: string;
+  active?: string;
+}
+
+const { title = 'Dashboard', active = '' } = Astro.props;
+const settings = getStoreSettings();
+const admin = await getAuthenticatedAdmin(Astro.cookies);
+---
+
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{title} — Admin {settings.storeName}</title>
+  </head>
+  <body class="bg-bone min-h-screen font-sans text-ink antialiased">
+    <div class="flex min-h-screen">
+      <AdminSidebar active={active} storeName={settings.storeName} />
+      <div class="flex flex-1 flex-col min-w-0 lg:ml-72">
+        <AdminTopbar storeName={settings.storeName} adminName={admin?.name ?? 'Admin'} />
+        <main class="flex-1 p-6 md:p-10 lg:p-12 overflow-x-auto">
+          <slot />
+        </main>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const sidebar = document.getElementById('admin-sidebar');
+        const toggle = document.getElementById('sidebar-toggle');
+        const overlay = document.getElementById('admin-sidebar-overlay');
+        const close = () => sidebar?.classList.add('-translate-x-full');
+        const open = () => sidebar?.classList.remove('-translate-x-full');
+        toggle?.addEventListener('click', () => sidebar?.classList.contains('-translate-x-full') ? open() : close());
+        overlay?.addEventListener('click', close);
+      });
+    </script>
+  </body>
+</html>

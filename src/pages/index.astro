@@ -1,0 +1,260 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+import ProductCard from '../components/product/ProductCard.astro';
+import CategoryCard from '../components/product/CategoryCard.astro';
+import { db, schema } from '../lib/db';
+import { eq, desc } from 'drizzle-orm';
+import { getStoreSettings } from '../lib/store';
+import { getProductFallbackImage } from '../lib/images';
+import { formatRupiah } from '../lib/money';
+import { buildWhatsAppLink } from '../lib/whatsapp';
+
+const settings = getStoreSettings();
+
+const allCategories = db
+  .select()
+  .from(schema.categories)
+  .where(eq(schema.categories.isActive, true))
+  .all();
+const categorySlugById = new Map(allCategories.map((c) => [c.id, c.slug]));
+
+const featuredProducts = db
+  .select()
+  .from(schema.products)
+  .where(eq(schema.products.isFeatured, true), eq(schema.products.isActive, true))
+  .orderBy(desc(schema.products.createdAt))
+  .limit(4)
+  .all()
+  .map((p) => ({ ...p, categorySlug: categorySlugById.get(p.categoryId) ?? null }));
+
+const categories = allCategories.slice(0, 6);
+
+const latestProducts = db
+  .select()
+  .from(schema.products)
+  .where(eq(schema.products.isActive, true))
+  .orderBy(desc(schema.products.createdAt))
+  .limit(3)
+  .all()
+  .map((p) => ({ ...p, categorySlug: categorySlugById.get(p.categoryId) ?? null }));
+
+const heroImage = settings.heroImage || 'https://picsum.photos/seed/mabelku-hero-wood/1000/1250';
+---
+
+<MainLayout>
+  <!-- ─── Hero ─── -->
+  <section class="relative overflow-hidden">
+    <div class="container-page pt-12 md:pt-20 pb-16 md:pb-24">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-end">
+        <div class="lg:col-span-7 relative z-10">
+          <p class="eyebrow mb-6">Edisi 2025 — Jepara × Modern</p>
+          <h1 class="display-xl text-balance">
+            Mebel yang
+            <span class="italic text-clay">bercerita,</span>
+            <br />dirancang untuk<br />ruang Anda.
+          </h1>
+          <p class="body-lg mt-8 max-w-xl text-pretty">
+            Setiap potong kayu membawa karakter, setiap sambungan punya niat. Temukan koleksi mebel Jepara yang dibuat tangan — hangat, jujur, dan tahan puluhan tahun.
+          </p>
+          <div class="mt-10 flex flex-col sm:flex-row gap-3">
+            <a href="/produk" class="btn-primary btn-lg">
+              Lihat Koleksi
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </a>
+            <a
+              href={buildWhatsAppLink(settings.whatsappNumber, 'Halo, saya ingin konsultasi tentang mebel untuk rumah saya.')}
+              target="_blank"
+              rel="noopener"
+              class="btn-outline btn-lg"
+            >
+              Konsultasi Gratis
+            </a>
+          </div>
+        </div>
+
+        <div class="lg:col-span-5 relative">
+          <div class="relative aspect-[4/5] rounded-3xl overflow-hidden bg-bone-soft">
+            <img src={heroImage} alt="Koleksi mebel Jepara" class="w-full h-full object-cover" />
+            <div class="absolute inset-0 bg-gradient-to-t from-ink/30 to-transparent"></div>
+          </div>
+
+          <div class="hidden md:block absolute -top-6 -left-6 surface-card p-5 max-w-[200px] shadow-md">
+            <p class="font-display text-3xl text-clay">15+</p>
+            <p class="text-xs text-muted leading-relaxed mt-1">Tahun pengrajin mengasah keahlian di Jepara</p>
+          </div>
+
+          <div class="hidden md:flex absolute -bottom-6 -right-6 surface-card p-4 items-center gap-3 shadow-md">
+            <div class="flex -space-x-2">
+              <div class="w-8 h-8 rounded-full bg-clay border-2 border-bone"></div>
+              <div class="w-8 h-8 rounded-full bg-olive border-2 border-bone"></div>
+              <div class="w-8 h-8 rounded-full bg-amber-glow border-2 border-bone"></div>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-ink">2,400+</p>
+              <p class="text-[10px] text-muted">Rumah terhias</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="border-t border-line">
+      <div class="container-page py-6 flex items-center gap-8 overflow-x-auto no-scrollbar">
+        <span class="text-xs uppercase tracking-[0.2em] text-muted flex-shrink-0">Material:</span>
+        <span class="font-display text-lg text-ink/70 whitespace-nowrap">Kayu Jati</span>
+        <span class="text-line">·</span>
+        <span class="font-display text-lg text-ink/70 whitespace-nowrap">Mahoni</span>
+        <span class="text-line">·</span>
+        <span class="font-display text-lg text-ink/70 whitespace-nowrap">Sonokeling</span>
+        <span class="text-line">·</span>
+        <span class="font-display text-lg text-ink/70 whitespace-nowrap">Trembesi</span>
+        <span class="text-line">·</span>
+        <span class="font-display text-lg text-ink/70 whitespace-nowrap">Akasia</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Categories ─── -->
+  {categories.length > 0 && (
+    <section class="section">
+      <div class="container-page">
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12 md:mb-16 pb-6 border-b border-line">
+          <div class="max-w-2xl">
+            <p class="eyebrow mb-4">Kategori</p>
+            <h2 class="display-lg text-balance">Pilih berdasarkan ruang, atau berdasarkan <span class="italic text-clay">rasa.</span></h2>
+          </div>
+          <a href="/produk" class="btn-outline btn-sm self-start md:self-auto flex-shrink-0">
+            Lihat semua koleksi
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </a>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+          {categories.map((cat) => <CategoryCard category={cat} />)}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- ─── Featured Products ─── -->
+  {featuredProducts.length > 0 && (
+    <section class="section bg-bone-soft">
+      <div class="container-page">
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 md:mb-16">
+          <div class="max-w-xl">
+            <p class="eyebrow mb-4">Kurasi Pilihan</p>
+            <h2 class="display-lg text-balance">Pilihan yang kami banggakan.</h2>
+          </div>
+          <a href="/produk" class="link-underline">
+            Semua produk
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </a>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+          {featuredProducts.map((product) => <ProductCard product={product} />)}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- ─── Why us ─── -->
+  <section class="section">
+    <div class="container-page">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20">
+        <div class="lg:col-span-5">
+          <p class="eyebrow mb-6">Mengapa Kami</p>
+          <h2 class="display-lg text-balance">Bukan sekadar furnitur. <span class="italic text-clay">Ini warisan.</span></h2>
+          <p class="body-lg mt-6 max-w-md">
+            Kami tidak membuat mebel untuk dilihat — kami membuatnya untuk disentuh, dihidupi, dan diwariskan. Setiap bagian melewati empat tangan pengrajin sebelum sampai ke rumah Anda.
+          </p>
+        </div>
+        <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-px bg-line">
+          {[
+            { num: '01', title: 'Material Pilihan', desc: 'Kayu kering alami, diawetkan tanpa bahan kimia keras.' },
+            { num: '02', title: 'Pengerjaan Tangan', desc: 'Sambungan mortise-tenon, bukan paku. Lebih kuat, lebih jujur.' },
+            { num: '03', title: 'Garansi Seumur Hidup', desc: 'Karena mebel yang baik tidak retak di tahun pertama.' },
+            { num: '04', title: 'Kirim ke Seluruh Indonesia', desc: 'Packing kayu khusus, diasuransikan, sampai utuh.' },
+          ].map((f) => (
+            <div class="bg-bone p-8 group hover:bg-ink hover:text-bone transition-colors duration-500">
+              <p class="font-display text-sm text-clay group-hover:text-clay-light transition-colors">{f.num}</p>
+              <h3 class="font-display text-2xl mt-4 mb-3">{f.title}</h3>
+              <p class="text-sm text-muted group-hover:text-bone/70 transition-colors leading-relaxed">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Latest ─── -->
+  {latestProducts.length > 0 && (
+    <section class="section-tight">
+      <div class="container-page">
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+          <div>
+            <p class="eyebrow mb-3">Baru Saja Tiba</p>
+            <h2 class="display-md text-balance">Koleksi terbaru dari workshop.</h2>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {latestProducts.map((product) => (
+            <a href={`/produk/${product.slug}`} class="group block relative overflow-hidden rounded-2xl aspect-[4/5] bg-bone-soft">
+              <img src={product.mainImage || getProductFallbackImage(product.slug, product.categorySlug)} alt={product.name} loading="lazy" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+              <div class="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/20 to-transparent"></div>
+              <div class="absolute bottom-0 left-0 right-0 p-6 text-bone">
+                <p class="text-xs uppercase tracking-[0.2em] text-bone/60 mb-2">Karya Terbaru</p>
+                <h3 class="font-display text-2xl md:text-3xl mb-2 text-balance">{product.name}</h3>
+                <div class="flex items-center justify-between mt-4">
+                  <span class="font-display text-lg">{formatRupiah(product.price)}</span>
+                  <span class="inline-flex items-center gap-1.5 text-sm text-bone/80 group-hover:text-bone group-hover:gap-2.5 transition-all">
+                    Lihat
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- ─── CTA ─── -->
+  <section class="section-tight">
+    <div class="container-page">
+      <div class="relative overflow-hidden rounded-3xl bg-ink text-bone p-10 md:p-16 lg:p-20">
+        <div class="absolute inset-0 opacity-[0.06]" style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 32px 32px;"></div>
+        <div class="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-clay/20 blur-3xl"></div>
+        <div class="relative max-w-2xl">
+          <p class="eyebrow mb-6 text-clay">Konsultasi Personal</p>
+          <h2 class="display-lg text-balance text-bone">
+            Punya ruang yang belum menemukan <span class="italic">pasangannya?</span>
+          </h2>
+          <p class="body-lg mt-6 text-bone/70 max-w-xl">
+            Ceritakan ruangan Anda — kami akan bantu pilih atau bahkan custom mebel yang sesuai. Tanpa biaya, tanpa komitmen.
+          </p>
+          <a
+            href={buildWhatsAppLink(settings.whatsappNumber, 'Halo, saya ingin konsultasi tentang mebel untuk rumah saya.')}
+            target="_blank"
+            rel="noopener"
+            class="mt-10 inline-flex items-center gap-3 px-7 py-4 bg-bone text-ink rounded-full font-medium hover:gap-4 hover:-translate-y-0.5 transition-all duration-300"
+          >
+            Mulai Percakapan
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+</MainLayout>

@@ -1,0 +1,121 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+import { getStoreSettings } from '../lib/store';
+
+const settings = getStoreSettings();
+---
+
+<MainLayout title="Tentang Kami — MebelKu" description="Cerita di balik setiap karya Jepara">
+  <!-- Hero -->
+  <section class="relative h-[70vh] min-h-[500px] overflow-hidden">
+    <img src="https://picsum.photos/seed/mabelku-workshop/1800/1100" alt="Workshop Jepara" class="w-full h-full object-cover" />
+    <div class="absolute inset-0 bg-gradient-to-t from-ink via-ink/40 to-ink/30"></div>
+    <div class="absolute inset-x-0 bottom-0 container-page pb-16 text-bone">
+      <p class="eyebrow text-clay mb-4">Cerita Kami</p>
+      <h1 class="display-xl text-balance max-w-3xl">Mebel bukan produk. <span class="italic">Ia warisan.</span></h1>
+    </div>
+  </section>
+
+  <!-- Intro -->
+  <section class="section">
+    <div class="container-page">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+        <div class="lg:col-span-4">
+          <p class="eyebrow mb-4">Filosofi</p>
+          <h2 class="display-md">Dari tangan ke rumah.</h2>
+        </div>
+        <div class="lg:col-span-7 lg:col-start-6 space-y-6 text-lg leading-relaxed text-ink/80 font-display">
+          {settings.aboutText ? (
+            <p class="whitespace-pre-wrap text-pretty">{settings.aboutText}</p>
+          ) : (
+            <>
+              <p>
+                Kami lahir di Jepara — kota yang selama ratusan tahun mengenal kayu lebih baik dari siapapun. Di sinilah kakek-nenek kami belajar menyambung kayu tanpa paku, dan dari tangan-tangan itulah {settings.storeName} berdiri.
+              </p>
+              <p>
+                Kami tidak membuat mebel untuk dilihat. Kami membuatnya untuk disentuh, dihidupi, dan akhirnya diwariskan. Setiap sambungan mortise-tenon melewati empat tangan pengrajin, setiap permukaan digosok dengan minyak alami — bukan cat yang mengelupas di tahun kelima.
+              </p>
+              <p>
+                Hasilnya? Mebel yang bicara pelan, tapi tahan bicara sampai cucu Anda nanti.
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Values -->
+  <section class="section bg-bone-soft">
+    <div class="container-page">
+      <div class="max-w-2xl mb-16">
+        <p class="eyebrow mb-4">Prinsip</p>
+        <h2 class="display-lg text-balance">Tiga hal yang tidak pernah kami kompromikan.</h2>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-px bg-line">
+        {[
+          { num: '01', title: 'Material yang bicara', desc: 'Hanya kayu keras pilihan — jati, mahoni, sonokeling — yang dikeringkan secara alami selama berbulan-bulan.' },
+          { num: '02', title: 'Sambungan yang jujur', desc: 'Mortise-tenon, dowel, dan pasak kayu. Bukan paku dan sekrup yang karatan di balik finishing.' },
+          { num: '03', title: 'Waktu yang cukup', desc: 'Satu kursi makan butuh 3-4 minggu. Tidak bisa dipercepat. Karena kayu butuh bernapas.' },
+        ].map((v) => (
+          <div class="bg-bone-soft p-10">
+            <p class="font-display text-sm text-clay">{v.num}</p>
+            <h3 class="font-display text-2xl mt-6 mb-4">{v.title}</h3>
+            <p class="text-ink/70 leading-relaxed">{v.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="container-page">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
+        {[
+          { num: '15+', label: 'Tahun pengalaman' },
+          { num: '2,400+', label: 'Rumah terhias' },
+          { num: '34', label: 'Pengrajin ahli' },
+          { num: '98%', label: 'Klien kembali' },
+        ].map((s) => (
+          <div class="text-center md:text-left border-t border-line pt-6">
+            <p class="font-display text-5xl md:text-6xl text-clay">{s.num}</p>
+            <p class="text-sm text-muted mt-2">{s.label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Location -->
+  {settings.address && (
+    <section class="section bg-ink text-bone">
+      <div class="container-page">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <p class="eyebrow text-clay mb-4">Kunjungi</p>
+            <h2 class="display-lg text-balance text-bone">Workshop kami terbuka untuk Anda.</h2>
+            <p class="body-lg mt-6 text-bone/70 max-w-md">
+              Lihat langsung proses pembuatan, pilih kayu, dan rasakan setiap detail. Atau sekadar ngobrol soal kayu dan kopi.
+            </p>
+            {settings.openingHours && (
+              <p class="mt-8 text-bone/60 text-sm">Jam: {settings.openingHours}</p>
+            )}
+          </div>
+          <div class="surface-card-soft bg-bone-soft/5 border-bone/20 p-8">
+            <p class="text-bone/60 text-sm mb-2">Alamat Workshop</p>
+            <p class="font-display text-2xl text-bone leading-relaxed">{settings.address}</p>
+            {settings.googleMapsUrl && (
+              <a href={settings.googleMapsUrl} target="_blank" rel="noopener" class="inline-flex items-center gap-2 mt-6 text-clay hover:text-clay-light transition-colors">
+                Buka di Maps
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  )}
+</MainLayout>

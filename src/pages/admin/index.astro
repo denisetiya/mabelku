@@ -1,0 +1,119 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { db, schema } from '../../lib/db';
+import { sql, eq, desc, asc } from 'drizzle-orm';
+import { formatRupiah } from '../../lib/money';
+
+const totalProducts = db.select({ count: sql<number>`count(*)` }).from(schema.products).get()?.count ?? 0;
+const totalOrders = db.select({ count: sql<number>`count(*)` }).from(schema.orders).get()?.count ?? 0;
+const newOrders = db.select({ count: sql<number>`count(*)` }).from(schema.orders).where(eq(schema.orders.status, 'pending')).get()?.count ?? 0;
+const totalRevenue = db.select({ total: sql<number>`COALESCE(SUM(total), 0)` }).from(schema.orders).where(eq(schema.orders.status, 'completed')).get()?.total ?? 0;
+
+const lowStockProducts = db.select().from(schema.products).where(sql`${schema.products.stock} <= 5`).orderBy(asc(schema.products.stock)).limit(5).all();
+
+const recentOrders = db
+  .select({
+    id: schema.orders.id,
+    orderCode: schema.orders.orderCode,
+    customerName: schema.orders.customerName,
+    total: schema.orders.total,
+    status: schema.orders.status,
+    createdAt: schema.orders.createdAt,
+  })
+  .from(schema.orders)
+  .orderBy(desc(schema.orders.createdAt))
+  .limit(5)
+  .all();
+
+const statusColors: Record<string, string> = {
+  pending: 'bg-amber-100 text-amber-800',
+  processing: 'bg-blue-100 text-blue-800',
+  shipped: 'bg-purple-100 text-purple-800',
+  completed: 'bg-moss/10 text-moss',
+  cancelled: 'bg-error/10 text-error',
+};
+const statusLabels: Record<string, string> = {
+  pending: 'Menunggu',
+  processing: 'Diproses',
+  shipped: 'Dikirim',
+  completed: 'Selesai',
+  cancelled: 'Dibatalkan',
+};
+
+const stats = [
+  { label: 'Total Produk', value: totalProducts, icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
+  { label: 'Total Pesanan', value: totalOrders, icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
+  { label: 'Pesanan Baru', value: newOrders, icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
+  { label: 'Pendapatan', value: formatRupiah(totalRevenue), icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0-1c-1.11 0-2.08-.402-2.599-1' },
+];
+---
+
+<AdminLayout title="Dashboard" active="/admin">
+  <div class="space-y-10">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-line border border-line rounded-2xl overflow-hidden">
+      {stats.map((stat, i) => (
+        <div class="bg-bone p-6 md:p-8">
+          <p class="text-xs uppercase tracking-[0.15em] text-muted">{stat.label}</p>
+          <p class="font-display text-3xl md:text-4xl text-ink mt-3">{stat.value}</p>
+        </div>
+      ))}
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="surface-card overflow-hidden">
+        <div class="p-6 border-b border-line flex items-center justify-between">
+          <h2 class="font-display text-xl text-ink">Pesanan Terbaru</h2>
+          <a href="/admin/pesanan" class="text-sm text-muted hover:text-ink transition-colors">Lihat semua →</a>
+        </div>
+        <div class="p-3">
+          {recentOrders.length === 0 ? (
+            <p class="text-muted text-sm text-center py-12">Belum ada pesanan</p>
+          ) : (
+            <div class="space-y-1">
+              {recentOrders.map((order) => (
+                <a href={`/admin/pesanan/${order.id}`} class="flex items-center justify-between p-3 rounded-xl hover:bg-bone-soft transition-colors group">
+                  <div>
+                    <p class="font-mono text-sm font-medium text-ink">{order.orderCode}</p>
+                    <p class="text-xs text-muted mt-0.5">{order.customerName}</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="font-display text-base text-ink">{formatRupiah(order.total)}</p>
+                    <span class={`pill text-[10px] mt-1 ${statusColors[order.status]}`}>{statusLabels[order.status]}</span>
+                  </div>
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div class="surface-card overflow-hidden">
+        <div class="p-6 border-b border-line flex items-center justify-between">
+          <h2 class="font-display text-xl text-ink">Stok Menipis</h2>
+          <a href="/admin/produk" class="text-sm text-muted hover:text-ink transition-colors">Kelola →</a>
+        </div>
+        <div class="p-3">
+          {lowStockProducts.length === 0 ? (
+            <p class="text-muted text-sm text-center py-12">Semua stok aman</p>
+          ) : (
+            <div class="space-y-1">
+              {lowStockProducts.map((product) => (
+                <div class="flex items-center justify-between p-3 rounded-xl hover:bg-bone-soft transition-colors">
+                  <div class="flex items-center gap-3 min-w-0">
+                    {product.mainImage && (
+                      <img src={product.mainImage} alt={product.name} class="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                    )}
+                    <p class="font-medium text-ink text-sm truncate">{product.name}</p>
+                  </div>
+                  <span class={`pill text-[10px] ${product.stock === 0 ? 'bg-error/10 text-error' : 'bg-amber-100 text-amber-800'}`}>
+                    Sisa {product.stock}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+</AdminLayout>

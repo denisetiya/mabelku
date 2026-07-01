@@ -1,0 +1,98 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Produk" active="/admin/produk">
+  <div class="space-y-8">
+    <div class="flex items-center justify-between">
+      <p class="text-sm text-muted" data-product-count>Memuat...</p>
+      <a href="/admin/produk/tambah" class="btn-primary">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        Tambah Produk
+      </a>
+    </div>
+
+    <div class="surface-card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-bone-soft border-b border-line">
+            <tr>
+              <th class="text-left px-6 py-4 font-medium text-ink">Produk</th>
+              <th class="text-left px-6 py-4 font-medium text-ink">Kategori</th>
+              <th class="text-right px-6 py-4 font-medium text-ink">Harga</th>
+              <th class="text-center px-6 py-4 font-medium text-ink">Stok</th>
+              <th class="text-center px-6 py-4 font-medium text-ink">Status</th>
+              <th class="text-right px-6 py-4 font-medium text-ink">Aksi</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-line" id="products-tbody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function loadProducts() {
+      const res = await fetch('/api/admin/products');
+      const { data } = await res.json();
+      window.__totalCount = data.length;
+
+      const tbody = document.getElementById('products-tbody')!;
+      tbody.innerHTML = data.map((p: any) => `
+        <tr class="hover:bg-bone-soft transition-colors">
+          <td class="px-6 py-4">
+            <div class="flex items-center gap-3">
+              ${p.mainImage ? `<img src="${p.mainImage}" alt="${p.name}" class="w-10 h-10 rounded-lg object-cover" />` : '<div class="w-10 h-10 rounded-lg bg-bone-soft"></div>'}
+              <div class="min-w-0">
+                <p class="font-medium text-ink truncate max-w-[200px]">${p.name}</p>
+                <p class="text-xs text-muted">${p.sku || '—'}</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-6 py-4 text-ink/80">${p.categoryName}</td>
+          <td class="px-6 py-4 font-display text-right text-ink">${formatRupiah(p.discountPrice && p.discountPrice > 0 ? p.discountPrice : p.price)}</td>
+          <td class="px-6 py-4 text-center">
+            <span class="pill ${p.stock === 0 ? 'bg-error/10 text-error' : p.stock <= 5 ? 'bg-amber-100 text-amber-800' : 'bg-moss/10 text-moss'}">${p.stock}</span>
+          </td>
+          <td class="px-6 py-4 text-center">
+            <div class="flex items-center justify-center gap-1">
+              ${p.isFeatured ? '<span class="pill-clay text-[10px]">Unggulan</span>' : ''}
+              <span class="pill ${p.isActive ? 'bg-moss/10 text-moss' : 'bg-bone-soft text-muted'} text-[10px]">${p.isActive ? 'Aktif' : 'Nonaktif'}</span>
+            </div>
+          </td>
+          <td class="px-6 py-4 text-right">
+            <div class="inline-flex gap-1">
+              <a href="/admin/produk/${p.id}/edit" class="w-8 h-8 inline-flex items-center justify-center rounded-lg hover:bg-bone-soft text-ink/70 hover:text-ink" title="Edit">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+              </a>
+              <button data-delete="${p.id}" class="w-8 h-8 inline-flex items-center justify-center rounded-lg hover:bg-error/10 text-ink/70 hover:text-error" title="Hapus">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+
+      const countEl = document.querySelector('[data-product-count]');
+      if (countEl) countEl.textContent = data.length;
+
+      tbody.querySelectorAll('[data-delete]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Yakin hapus produk ini?')) return;
+          const id = (btn as HTMLElement).dataset.delete;
+          await fetch(`/api/admin/products/${id}`, { method: 'DELETE' });
+          loadProducts();
+        });
+      });
+    }
+
+    function formatRupiah(amount: number) {
+      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+    }
+
+    loadProducts();
+  </script>
+</AdminLayout>

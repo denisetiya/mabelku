@@ -1,0 +1,78 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+import { getStoreSettings } from '../lib/store';
+import { buildWhatsAppLink } from '../lib/whatsapp';
+
+const settings = getStoreSettings();
+---
+
+<MainLayout title="Kontak — MebelKu" description="Hubungi kami untuk konsultasi">
+  <section class="container-page py-20 md:py-28">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20">
+      <div class="lg:col-span-5">
+        <p class="eyebrow mb-6">Hubungi Kami</p>
+        <h1 class="display-lg text-balance">Mari ngobrol soal <span class="italic text-clay">kayu.</span></h1>
+        <p class="body-lg mt-6 max-w-md">
+          Konsultasi gratis, tanpa komitmen. Kami dengarkan dulu sebelum menyarankan.
+        </p>
+
+        <a
+          href={buildWhatsAppLink(settings.whatsappNumber, 'Halo, saya ingin bertanya tentang produk mebel.')}
+          target="_blank"
+          rel="noopener"
+          class="btn-clay btn-lg mt-10"
+        >
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347" />
+          </svg>
+          Chat WhatsApp
+        </a>
+      </div>
+
+      <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-px bg-line">
+        {settings.whatsappNumber && (
+          <div class="bg-bone p-8">
+            <p class="eyebrow mb-3">WhatsApp</p>
+            <p class="font-display text-2xl text-ink">+{settings.whatsappNumber}</p>
+            <p class="text-sm text-muted mt-2">Respons 1-2 jam (jam kerja)</p>
+          </div>
+        )}
+        {settings.email && (
+          <div class="bg-bone p-8">
+            <p class="eyebrow mb-3">Email</p>
+            <p class="font-display text-2xl text-ink break-all">{settings.email}</p>
+            <p class="text-sm text-muted mt-2">Untuk pertanyaan detail</p>
+          </div>
+        )}
+        {settings.address && (
+          <div class="bg-bone p-8">
+            <p class="eyebrow mb-3">Workshop</p>
+            <p class="font-display text-xl text-ink leading-relaxed">{settings.address}</p>
+          </div>
+        )}
+        {settings.openingHours && (
+          <div class="bg-bone p-8">
+            <p class="eyebrow mb-3">Jam Operasional</p>
+            <p class="font-display text-xl text-ink leading-relaxed">{settings.openingHours}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  </section>
+
+  {settings.googleMapsUrl && (
+    <section class="container-page pb-20">
+      <div class="rounded-3xl overflow-hidden border border-line">
+        <iframe
+          src={settings.googleMapsUrl}
+          width="100%"
+          height="480"
+          style="border:0"
+          loading="lazy"
+          allowfullscreen
+          referrerpolicy="no-referrer-when-downgrade"
+        ></iframe>
+      </div>
+    </section>
+  )}
+</MainLayout>

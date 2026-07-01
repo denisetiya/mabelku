@@ -1,0 +1,214 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+import { formatRupiah } from '../lib/money';
+import { getStoreSettings } from '../lib/store';
+
+const settings = getStoreSettings();
+---
+
+<MainLayout title="Checkout — MebelKu" description="Selesaikan pesanan Anda">
+  <section class="container-page section-tight">
+    <div class="max-w-6xl mx-auto">
+      <header class="mb-12">
+        <p class="eyebrow mb-4">Finalisasi</p>
+        <h1 class="display-lg text-balance">Checkout.</h1>
+      </header>
+
+      <div id="checkout-empty" class="py-20 text-center hidden">
+        <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-bone-soft flex items-center justify-center">
+          <svg class="w-8 h-8 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+          </svg>
+        </div>
+        <p class="font-display text-3xl mb-2">Belum ada pesanan</p>
+        <p class="text-muted mb-8">Pilih karya dulu, baru kembali ke sini.</p>
+        <a href="/produk" class="btn-primary">Belanja Sekarang</a>
+      </div>
+
+      <div id="checkout-content" class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 hidden">
+        <div class="lg:col-span-7">
+          <form id="checkout-form" class="space-y-10">
+            <div>
+              <p class="eyebrow mb-5">01 / Identitas</p>
+              <div class="space-y-5">
+                <div>
+                  <label class="label" for="customerName">Nama Lengkap *</label>
+                  <input type="text" id="customerName" name="customerName" required class="input-boxed" placeholder="Nama Anda" />
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div>
+                    <label class="label" for="customerPhone">WhatsApp *</label>
+                    <input type="tel" id="customerPhone" name="customerPhone" required class="input-boxed" placeholder="628123456789" />
+                  </div>
+                  <div>
+                    <label class="label" for="customerEmail">Email <span class="normal-case text-muted-soft">(opsional)</span></label>
+                    <input type="email" id="customerEmail" name="customerEmail" class="input-boxed" placeholder="email@contoh.com" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <p class="eyebrow mb-5">02 / Pengiriman</p>
+              <div class="space-y-5">
+                <div>
+                  <label class="label" for="address">Alamat Lengkap *</label>
+                  <textarea id="address" name="address" required rows="3" class="input-boxed" placeholder="Jalan, nomor, RT/RW, kelurahan"></textarea>
+                </div>
+                <div>
+                  <label class="label" for="city">Kota / Kabupaten</label>
+                  <input type="text" id="city" name="city" class="input-boxed" placeholder="Kota Anda" />
+                </div>
+                <div>
+                  <label class="label" for="note">Catatan <span class="normal-case text-muted-soft">(opsional)</span></label>
+                  <textarea id="note" name="note" rows="2" class="input-boxed" placeholder="Pesan untuk penjual"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <p class="eyebrow mb-5">03 / Pembayaran</p>
+              <div class="space-y-3">
+                {[
+                  { value: 'bank_transfer', label: 'Transfer Bank', desc: 'Transfer manual ke rekening toko' },
+                  { value: 'cod', label: 'Bayar di Tempat (COD)', desc: 'Bayar saat pesanan tiba' },
+                  { value: 'whatsapp_confirmation', label: 'Konfirmasi via WhatsApp', desc: 'Konfirmasi pembayaran lewat chat' },
+                ].map((p, i) => (
+                  <label class:list={["flex items-start gap-4 p-5 border border-line rounded-2xl cursor-pointer transition-all hover:border-ink/40 has-[:checked]:border-ink has-[:checked]:bg-bone-soft", i === 0 && 'has-[:checked]:border-ink has-[:checked]:bg-bone-soft']}>
+                    <input type="radio" name="paymentMethod" value={p.value} checked={i === 0} class="mt-1.5 accent-ink" />
+                    <div>
+                      <p class="font-display text-lg text-ink">{p.label}</p>
+                      <p class="text-sm text-muted mt-0.5">{p.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="lg:col-span-5">
+          <div class="lg:sticky lg:top-28 surface-card p-8">
+            <p class="eyebrow mb-6">Pesanan Anda</p>
+            <div id="order-items" class="space-y-4 mb-6 max-h-80 overflow-y-auto pr-1 no-scrollbar"></div>
+            <div class="border-t border-line pt-5 space-y-3 text-sm">
+              <div class="flex justify-between text-muted">
+                <span>Subtotal</span>
+                <span id="order-subtotal">Rp0</span>
+              </div>
+              <div class="flex justify-between text-muted">
+                <span>Pengiriman</span>
+                <span class="text-xs">Dihitung kemudian</span>
+              </div>
+            </div>
+            <div class="border-t border-line pt-5 mt-5 flex justify-between items-baseline">
+              <span class="font-display text-xl text-ink">Total</span>
+              <span class="font-display text-2xl text-ink" id="order-total">Rp0</span>
+            </div>
+
+            <button id="submit-order" class="btn-primary btn-lg w-full mt-8">
+              Buat Pesanan
+            </button>
+            <p class="text-xs text-muted text-center mt-4 leading-relaxed">
+              Setelah membuat pesanan, Anda akan diarahkan ke WhatsApp untuk konfirmasi.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    import { cart, getCartSubtotal, clearCart } from '../components/cart/store';
+    import { formatRupiah } from '../lib/money';
+    import { getProductFallback } from '../lib/images-client';
+
+    function renderCheckout() {
+      const items = cart.get();
+      const emptyEl = document.getElementById('checkout-empty');
+      const contentEl = document.getElementById('checkout-content');
+
+      if (items.length === 0) {
+        emptyEl?.classList.remove('hidden');
+        contentEl?.classList.add('hidden');
+        return;
+      }
+
+      emptyEl?.classList.add('hidden');
+      contentEl?.classList.remove('hidden');
+
+      const itemsEl = document.getElementById('order-items');
+      if (itemsEl) {
+        itemsEl.innerHTML = items.map((item) => {
+          const price = item.discountPrice && item.discountPrice > 0 ? item.discountPrice : item.price;
+          const img = item.mainImage || getProductFallback(item.slug);
+          return `
+            <div class="flex gap-3 items-center">
+              <div class="w-14 h-14 rounded-xl overflow-hidden bg-bone-soft flex-shrink-0">
+                <img src="${img}" alt="${item.name}" class="w-full h-full object-cover" />
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-display text-sm text-ink line-clamp-1">${item.name}</p>
+                <p class="text-xs text-muted">${item.quantity} × ${formatRupiah(price)}</p>
+              </div>
+              <p class="text-sm font-display text-ink">${formatRupiah(price * item.quantity)}</p>
+            </div>
+          `;
+        }).join('');
+      }
+
+      const subtotal = getCartSubtotal();
+      document.getElementById('order-subtotal')!.textContent = formatRupiah(subtotal);
+      document.getElementById('order-total')!.textContent = formatRupiah(subtotal);
+    }
+
+    cart.subscribe(renderCheckout);
+    renderCheckout();
+
+    document.getElementById('submit-order')?.addEventListener('click', async () => {
+      const btn = document.getElementById('submit-order') as HTMLButtonElement;
+      const items = cart.get();
+
+      if (items.length === 0) return;
+
+      const form = document.getElementById('checkout-form') as HTMLFormElement;
+      const formData = new FormData(form);
+      const data = {
+        customerName: formData.get('customerName'),
+        customerPhone: formData.get('customerPhone'),
+        customerEmail: formData.get('customerEmail'),
+        address: formData.get('address'),
+        city: formData.get('city'),
+        note: formData.get('note'),
+        paymentMethod: formData.get('paymentMethod'),
+        items: items.map((i) => ({ productId: i.id, quantity: i.quantity })),
+      };
+
+      btn.disabled = true;
+      btn.textContent = 'Memproses...';
+
+      try {
+        const res = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+
+        const result = await res.json();
+
+        if (result.success) {
+          clearCart();
+          window.location.href = `/checkout/sukses/${result.orderCode}`;
+        } else {
+          alert(result.error || 'Terjadi kesalahan');
+          btn.disabled = false;
+          btn.textContent = 'Buat Pesanan';
+        }
+      } catch {
+        alert('Terjadi kesalahan jaringan');
+        btn.disabled = false;
+        btn.textContent = 'Buat Pesanan';
+      }
+    });
+  </script>
+</MainLayout>

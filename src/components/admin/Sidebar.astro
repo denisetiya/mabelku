@@ -1,0 +1,64 @@
+---
+interface Props {
+  active: string;
+  storeName: string;
+}
+
+const { active, storeName } = Astro.props;
+
+const menu = [
+  { path: '/admin', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+  { path: '/admin/pesanan', label: 'Pesanan', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
+  { path: '/admin/produk', label: 'Produk', icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
+  { path: '/admin/kategori', label: 'Kategori', icon: 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z' },
+  { path: '/admin/pengaturan', label: 'Pengaturan', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
+];
+---
+
+<aside id="admin-sidebar" class="fixed lg:sticky top-0 left-0 -translate-x-full lg:translate-x-0 transition-transform duration-300 w-72 h-screen bg-ink text-bone z-50 flex flex-col">
+  <div class="h-20 flex items-center px-6 border-b border-bone/10">
+    <a href="/admin" class="flex items-center gap-2.5">
+      <span class="w-8 h-8 rounded-full bg-bone flex items-center justify-center text-ink font-display text-sm">M</span>
+      <span class="font-display text-lg tracking-tight">{storeName}</span>
+    </a>
+  </div>
+
+  <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+    <p class="px-4 pt-2 pb-3 text-[10px] uppercase tracking-[0.2em] text-bone/40">Menu</p>
+    {menu.map((item) => {
+      const isActive = active === item.path || (item.path !== '/admin' && active?.startsWith(item.path));
+      return (
+        <a
+          href={item.path}
+          class={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+            isActive
+              ? 'bg-bone text-ink'
+              : 'text-bone/70 hover:bg-bone/10 hover:text-bone'
+          }`}
+        >
+          <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d={item.icon} />
+          </svg>
+          {item.label}
+        </a>
+      );
+    })}
+  </nav>
+
+  <div class="p-4 border-t border-bone/10 space-y-1">
+    <a href="/" target="_blank" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-bone/70 hover:bg-bone/10 hover:text-bone transition-colors">
+      <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+      </svg>
+      Lihat Toko
+    </a>
+    <a href="/api/admin/logout" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-bone/70 hover:bg-error/20 hover:text-bone transition-colors">
+      <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+      </svg>
+      Logout
+    </a>
+  </div>
+</aside>
+
+<div id="admin-sidebar-overlay" class="fixed inset-0 bg-ink/40 backdrop-blur-sm z-40 lg:hidden hidden"></div>

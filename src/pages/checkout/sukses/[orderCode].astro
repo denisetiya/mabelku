@@ -1,0 +1,120 @@
+---
+import MainLayout from '../../../layouts/MainLayout.astro';
+import { db, schema } from '../../../lib/db';
+import { eq } from 'drizzle-orm';
+import { formatRupiah } from '../../../lib/money';
+import { buildWhatsAppLink, buildOrderConfirmationMessage } from '../../../lib/whatsapp';
+import { getStoreSettings } from '../../../lib/store';
+
+const { orderCode } = Astro.params;
+
+const order = db
+  .select()
+  .from(schema.orders)
+  .where(eq(schema.orders.orderCode, orderCode))
+  .get();
+
+if (!order) {
+  return Astro.redirect('/404');
+}
+
+const items = db
+  .select()
+  .from(schema.orderItems)
+  .where(eq(schema.orderItems.orderId, order.id))
+  .all();
+
+const settings = getStoreSettings();
+const waLink = buildWhatsAppLink(
+  settings.whatsappNumber,
+  buildOrderConfirmationMessage(order.orderCode, order.total, order.customerName),
+);
+
+const paymentLabels: Record<string, string> = {
+  bank_transfer: 'Transfer Bank',
+  cod: 'Bayar di Tempat (COD)',
+  whatsapp_confirmation: 'Konfirmasi via WhatsApp',
+};
+---
+
+<MainLayout title={`Pesanan ${order.orderCode} Berhasil — MebelKu`} description="Pesanan Anda berhasil dibuat">
+  <section class="container-page section-tight">
+    <div class="max-w-2xl mx-auto">
+      <div class="text-center mb-12">
+        <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-moss/10 flex items-center justify-center">
+          <svg class="w-9 h-9 text-moss" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <p class="eyebrow mb-3">Pesanan Diterima</p>
+        <h1 class="display-md text-balance">Terima kasih, {order.customerName}.</h1>
+        <p class="body-base mt-4 max-w-md mx-auto">Pesanan Anda telah kami catat. Tim kami akan menghubungi Anda untuk konfirmasi.</p>
+        <p class="mt-6 text-sm text-muted">Kode: <span class="font-mono font-medium text-ink">{order.orderCode}</span></p>
+      </div>
+
+      <div class="surface-card p-8 mb-6">
+        <p class="eyebrow mb-5">Item Pesanan</p>
+        <div class="space-y-4 mb-6">
+          {items.map((item) => (
+            <div class="flex justify-between items-start gap-4 text-sm">
+              <div class="flex-1">
+                <p class="font-display text-lg text-ink">{item.productName}</p>
+                <p class="text-muted">{item.quantity} × {formatRupiah(item.productPrice)}</p>
+              </div>
+              <p class="font-display text-lg text-ink">{formatRupiah(item.total)}</p>
+            </div>
+          ))}
+        </div>
+        <div class="border-t border-line pt-4 space-y-2 text-sm">
+          <div class="flex justify-between text-muted">
+            <span>Subtotal</span>
+            <span>{formatRupiah(order.subtotal)}</span>
+          </div>
+          <div class="flex justify-between text-muted">
+            <span>Pengiriman</span>
+            <span>{order.shippingCost > 0 ? formatRupiah(order.shippingCost) : 'Dihitung kemudian'}</span>
+          </div>
+          <div class="flex justify-between items-baseline pt-3 border-t border-line">
+            <span class="font-display text-xl text-ink">Total</span>
+            <span class="font-display text-2xl text-ink">{formatRupiah(order.total)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="surface-card p-8 mb-6">
+        <p class="eyebrow mb-5">Info Pengiriman</p>
+        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+          <div>
+            <dt class="text-muted mb-1">Nama</dt>
+            <dd class="font-medium text-ink">{order.customerName}</dd>
+          </div>
+          <div>
+            <dt class="text-muted mb-1">WhatsApp</dt>
+            <dd class="font-medium text-ink">{order.customerPhone}</dd>
+          </div>
+          <div class="sm:col-span-2">
+            <dt class="text-muted mb-1">Alamat</dt>
+            <dd class="font-medium text-ink">{order.address}{order.city ? `, ${order.city}` : ''}</dd>
+          </div>
+          <div>
+            <dt class="text-muted mb-1">Pembayaran</dt>
+            <dd class="font-medium text-ink">{paymentLabels[order.paymentMethod]}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <a href={waLink} target="_blank" rel="noopener" class="btn-clay btn-lg w-full">
+        Konfirmasi via WhatsApp
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+        </svg>
+      </a>
+
+      <div class="text-center mt-8">
+        <a href="/produk" class="link-underline text-sm">
+          ← Lanjut belanja
+        </a>
+      </div>
+    </div>
+  </section>
+</MainLayout>

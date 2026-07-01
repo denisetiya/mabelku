@@ -1,0 +1,68 @@
+---
+import MainLayout from '../../layouts/MainLayout.astro';
+import ProductCard from '../../components/product/ProductCard.astro';
+import { db, schema } from '../../lib/db';
+import { eq, and } from 'drizzle-orm';
+import { getCategoryCover } from '../../lib/images';
+
+const { slug } = Astro.params;
+
+const category = db
+  .select()
+  .from(schema.categories)
+  .where(and(eq(schema.categories.slug, slug), eq(schema.categories.isActive, true)))
+  .get();
+
+if (!category) {
+  return Astro.redirect('/404');
+}
+
+const products = db
+  .select()
+  .from(schema.products)
+  .where(and(eq(schema.products.categoryId, category.id), eq(schema.products.isActive, true)))
+  .all()
+  .map((p) => ({ ...p, categorySlug: category.slug }));
+
+const cover = category.image || getCategoryCover(category.slug);
+---
+
+<MainLayout title={`${category.name} — MebelKu`} description={category.description ?? `Koleksi ${category.name} berkualitas dari Jepara`}>
+  <!-- Cover -->
+  <section class="relative h-[60vh] min-h-[400px] overflow-hidden">
+    <img src={cover} alt={category.name} class="w-full h-full object-cover" />
+    <div class="absolute inset-0 bg-gradient-to-t from-ink via-ink/40 to-ink/20"></div>
+    <div class="absolute inset-x-0 bottom-0 container-page pb-12 md:pb-16 text-bone">
+      <nav class="flex items-center gap-2 text-sm text-bone/60 mb-6">
+        <a href="/" class="hover:text-bone">Beranda</a>
+        <span>/</span>
+        <a href="/produk" class="hover:text-bone">Koleksi</a>
+        <span>/</span>
+        <span class="text-bone">{category.name}</span>
+      </nav>
+      <p class="eyebrow text-clay mb-4">Kategori</p>
+      <h1 class="display-xl text-balance max-w-3xl">{category.name}</h1>
+      {category.description && (
+        <p class="body-lg mt-4 max-w-2xl text-bone/80">{category.description}</p>
+      )}
+    </div>
+  </section>
+
+  <section class="container-page section-tight">
+    <div class="flex items-center justify-between mb-10">
+      <p class="text-muted text-sm">{products.length} produk</p>
+    </div>
+
+    {products.length === 0 ? (
+      <div class="py-24 text-center">
+        <p class="font-display text-2xl text-ink mb-3">Belum ada produk</p>
+        <p class="text-muted mb-8">Kategori ini sedang dalam persiapan.</p>
+        <a href="/produk" class="btn-primary">Lihat Semua Koleksi</a>
+      </div>
+    ) : (
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-12">
+        {products.map((product) => <ProductCard product={product} />)}
+      </div>
+    )}
+  </section>
+</MainLayout>

@@ -1,0 +1,126 @@
+---
+import MainLayout from '../../layouts/MainLayout.astro';
+import ProductCard from '../../components/product/ProductCard.astro';
+import { db, schema } from '../../lib/db';
+import { eq, and, like, desc, asc } from 'drizzle-orm';
+
+const url = Astro.url;
+const search = url.searchParams.get('search') ?? '';
+const category = url.searchParams.get('category') ?? '';
+const sort = url.searchParams.get('sort') ?? 'newest';
+const page = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10));
+const limit = 12;
+const offset = (page - 1) * limit;
+
+const conditions = [eq(schema.products.isActive, true)];
+if (search) {
+  conditions.push(like(schema.products.name, `%${search}%`));
+}
+if (category) {
+  conditions.push(eq(schema.categories.slug, category));
+}
+
+const where = and(...conditions);
+
+const orderClause: Record<string, typeof desc> = {
+  newest: desc(schema.products.createdAt),
+  'price-asc': asc(schema.products.price),
+  'price-desc': desc(schema.products.price),
+  'name-asc': asc(schema.products.name),
+};
+const orderBy = orderClause[sort] ?? desc(schema.products.createdAt);
+
+const productsRaw = db
+  .select()
+  .from(schema.products)
+  .innerJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
+  .where(where)
+  .orderBy(orderBy)
+  .limit(limit)
+  .offset(offset)
+  .all();
+const products = productsRaw.map(({ products: p, categories: c }) => ({ ...p, categorySlug: c.slug }));
+
+const categories = db
+  .select()
+  .from(schema.categories)
+  .where(eq(schema.categories.isActive, true))
+  .all();
+---
+
+<MainLayout title={`Koleksi Mebel — MebelKu`} description="Lihat semua koleksi mebel Jepara kami. Kursi, meja, lemari, sofa, dan furniture berkualitas.">
+  <!-- Header -->
+  <section class="border-b border-line">
+    <div class="container-page py-16 md:py-24">
+      <p class="eyebrow mb-6">Koleksi</p>
+      <h1 class="display-xl text-balance max-w-4xl">Mebel Jepara untuk setiap sudut rumah.</h1>
+      <p class="body-lg mt-6 max-w-2xl">{products.length} karya tersedia. Dipilih langsung dari workshop.</p>
+    </div>
+  </section>
+
+  <section class="container-page section-tight">
+    <div class="flex flex-col lg:flex-row gap-10 lg:gap-16">
+      <!-- Filter sidebar -->
+      <aside class="lg:w-72 flex-shrink-0">
+        <div class="lg:sticky lg:top-28">
+          <form id="filter-form" method="get" class="space-y-8">
+            <div>
+              <label class="label">Pencarian</label>
+              <input type="text" name="search" value={search} placeholder="Cari nama produk..." class="input-boxed" />
+            </div>
+
+            <div>
+              <label class="label">Kategori</label>
+              <div class="space-y-1.5">
+                <a href="/produk" class:list={["block px-3 py-2 rounded-lg text-sm transition-colors", !category ? "bg-ink text-bone" : "text-ink/70 hover:bg-bone-soft"]}>
+                  Semua
+                </a>
+                {categories.map((cat) => (
+                  <a href={`/produk?category=${cat.slug}`} class:list={["block px-3 py-2 rounded-lg text-sm transition-colors", category === cat.slug ? "bg-ink text-bone" : "text-ink/70 hover:bg-bone-soft"]}>
+                    {cat.name}
+                  </a>
+                ))}
+              </div>
+              <input type="hidden" name="category" value={category} />
+            </div>
+
+            <div>
+              <label class="label">Urutkan</label>
+              <select name="sort" class="input-boxed">
+                <option value="newest" selected={sort === 'newest'}>Terbaru</option>
+                <option value="price-asc" selected={sort === 'price-asc'}>Harga Termurah</option>
+                <option value="price-desc" selected={sort === 'price-desc'}>Harga Termahal</option>
+                <option value="name-asc" selected={sort === 'name-asc'}>Nama A-Z</option>
+              </select>
+            </div>
+
+            <button type="submit" class="btn-primary w-full">Terapkan</button>
+            {(search || category || sort !== 'newest') && (
+              <a href="/produk" class="block text-center text-sm text-muted hover:text-ink transition-colors">Reset filter</a>
+            )}
+          </form>
+        </div>
+      </aside>
+
+      <!-- Products -->
+      <div class="flex-1 min-w-0">
+        {products.length === 0 ? (
+          <div class="py-24 text-center">
+            <div class="w-16 h-16 rounded-full bg-bone-soft flex items-center justify-center mx-auto mb-6">
+              <svg class="w-7 h-7 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <p class="font-display text-2xl text-ink mb-2">Tidak ditemukan</p>
+            <p class="text-muted mb-8">Coba kata kunci atau kategori lain.</p>
+            <a href="/produk" class="btn-primary">Reset Pencarian</a>
+          </div>
+        ) : (
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-12">
+            {products.map((p) => <ProductCard product={p} />)}
+          </div>
+        )}
+      </div>
+    </div>
+  </section>
+</MainLayout>

@@ -38,7 +38,7 @@ const latestProducts = db
   .all()
   .map((p) => ({ ...p, categorySlug: categorySlugById.get(p.categoryId) ?? null }));
 
-const heroImage = settings.heroImage || 'https://picsum.photos/seed/mabelku-hero-wood/1000/1250';
+const heroImage = settings.heroImage || 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&q=80&w=1000&h=1250';
 ---
 
 <MainLayout>
